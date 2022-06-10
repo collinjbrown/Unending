@@ -57,6 +57,9 @@ int main(void)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+
 	Game::main.window = window;
 
 	printf("OpenGL version supported by this platform (%s): \n", glGetString(GL_VERSION));
@@ -73,7 +76,7 @@ int main(void)
 	Renderer renderer{ whiteTexture->ID };
 	Game::main.renderer = &renderer;
 
-	Texture test{ "assets/sprites/test.png", true, GL_NEAREST };
+	Texture test{ "assets/sprites/test2.png", true, GL_NEAREST };
 	renderer.textureIDs.push_back(test.ID);
 	Game::main.textureMap.emplace("test", &test);
 
@@ -117,8 +120,8 @@ int main(void)
 		glm::vec3 up = Util::Rotate(glm::vec3(0.0f, 1.0f, 0.0f), Game::main.cameraRotation);
 		glm::vec3 center = Game::main.cameraPosition + Util::Rotate(glm::vec3(0.0f, 0.0f, -1.0f), Game::main.cameraRotation);
 		Game::main.view = glm::lookAt(Game::main.cameraPosition, center, up);
+		Game::main.view = glm::inverse(Game::main.view);
 
-		// std::cout << std::to_string(up.x) + " / " + std::to_string(up.y) + " / " + std::to_string(up.z) << std::endl;
 
 		// Get Meta Input
 		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -127,19 +130,12 @@ int main(void)
 		}
 
 
-		bool moveForward = ((glfwGetKey(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS));
-		bool moveBack = ((glfwGetKey(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS));
 		bool moveRight = ((glfwGetKey(Game::main.window, Game::main.moveRightKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveRightKey) == GLFW_PRESS));
 		bool moveLeft = ((glfwGetKey(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS));
-
-		if (moveForward)
-		{
-			Game::main.cameraPosition.z += Game::main.cameraSpeed * deltaTime;
-		}
-		else if (moveBack)
-		{
-			Game::main.cameraPosition.z -= Game::main.cameraSpeed * deltaTime;
-		}
+		bool moveUp = ((glfwGetKey(Game::main.window, Game::main.moveUpKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveUpKey) == GLFW_PRESS));
+		bool moveDown = ((glfwGetKey(Game::main.window, Game::main.moveDownKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveDownKey) == GLFW_PRESS));
+		bool moveForward = ((glfwGetKey(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS));
+		bool moveBack = ((glfwGetKey(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS));
 
 		if (moveRight)
 		{
@@ -150,9 +146,29 @@ int main(void)
 			Game::main.cameraPosition.x -= Game::main.cameraSpeed * deltaTime;
 		}
 
+		if (moveUp)
+		{
+			Game::main.cameraPosition.y += Game::main.cameraSpeed * deltaTime;
+		}
+		else if (moveDown)
+		{
+			Game::main.cameraPosition.y -= Game::main.cameraSpeed * deltaTime;
+		}
+
+		if (moveForward)
+		{
+			Game::main.cameraPosition.z += Game::main.cameraSpeed * deltaTime;
+		}
+		else if (moveBack)
+		{
+			Game::main.cameraPosition.z -= Game::main.cameraSpeed * deltaTime;
+		}
+
 		// Update
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
+		glClearDepth(1.0);
+		glClear(GL_DEPTH_BUFFER_BIT);
 
 		int focus = glfwGetWindowAttrib(window, GLFW_FOCUSED);
 

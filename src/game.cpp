@@ -1,5 +1,6 @@
 #include "game.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include <corecrt_math_defines.h>
 
 void Game::UpdateProjection()
 {

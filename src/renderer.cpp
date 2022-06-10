@@ -97,7 +97,7 @@ Bundle Renderer::DetermineBatch(int textureID)
 	}
 	else
 	{
-		location = texturesUsed.size();
+		location = texturesUsed.size() + 1;
 		texturesUsed.push_back(textureID);
 		return { currentBatch, (float)(static_cast<int>(location - 1) % MAX_TEXTURES_PER_BATCH) };
 	}
@@ -124,7 +124,7 @@ void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, glm::vec3 rotatio
 		{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.5,	(float)textureID }
 	};
 
-	// Back		- All the far verts.	- The verts need to be entered clockwise facing the front (of the quad), hence why this is flipped.
+	// Back		- All the far verts.
 	Quad back
 	{
 		{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.25,	(float)textureID },
@@ -145,10 +145,10 @@ void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, glm::vec3 rotatio
 	// Right	- Close right, top and bottom, and far right, top and bottom.	- The close verts will be treated as the quad's left, top and bottom.
 	Quad right
 	{
-		{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.25,	(float)textureID },
-		{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.5,	0.0,	(float)textureID },
+		{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.25,	(float)textureID },
 		{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.0,	(float)textureID },
-		{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.25,	(float)textureID }
+		{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.5,	0.0,	(float)textureID },
+		{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.25,	(float)textureID }
 	};
 
 	// Top		- Close top, left and right, and far top, left and right.		- The left verts, far and close, will be treated as the quad's left, top and bottom.

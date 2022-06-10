@@ -33,10 +33,10 @@ public:
 	glm::mat4 view;
 	glm::mat4 projection;
 
-	float farClip = 100.0f;
-	float nearClip = 2.0f;
+	float nearClip = 0.1f;
+	float farClip = 1500.0f;
 
-	float fieldOfView = 90.0f;
+	float fieldOfView = 180.0f;
 
 	ProjectionType projectionType = ProjectionType::perspective;
 
@@ -45,14 +45,14 @@ public:
 	// Keyboard and Mouse Mappings
 	int clickKey = GLFW_MOUSE_BUTTON_1;
 
-	int moveForwardKey = GLFW_KEY_W;
-	int moveBackKey = GLFW_KEY_S;
+	int moveForwardKey = GLFW_KEY_KP_ADD;
+	int moveBackKey = GLFW_KEY_KP_SUBTRACT;
 
 	int moveRightKey = GLFW_KEY_D;
 	int moveLeftKey = GLFW_KEY_A;
 
-	int moveUpKey = GLFW_KEY_KP_ADD;
-	int moveDownKey = GLFW_KEY_KP_SUBTRACT;
+	int moveUpKey = GLFW_KEY_W;
+	int moveDownKey = GLFW_KEY_S;
 };
 
 #endif
