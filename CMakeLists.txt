@@ -19,6 +19,8 @@ set(BASE_SRCS
     "src/renderer.h"
     "src/shader.cpp"
     "src/shader.h"
+    "src/texture.cpp"
+    "src/texture.h"
     "src/util.cpp"
     "src/util.h"
     )

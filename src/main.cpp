@@ -8,8 +8,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include <glm/ext/matrix_transform.hpp>
 
 #include "game.h"
+#include "util.h"
 
 Game Game::main;
 
@@ -66,14 +68,27 @@ int main(void)
 
 	Game::main.UpdateProjection();
 
+	Texture* whiteTexture = Texture::whiteTexture();
+
+	Renderer renderer{ whiteTexture->ID };
+	Game::main.renderer = &renderer;
+
+	Texture test{ "assets/sprites/test.png", true, GL_NEAREST };
+	renderer.textureIDs.push_back(test.ID);
+	Game::main.textureMap.emplace("test", &test);
+
 	// \General Setup
 
 	// Main Loop
+	float checkedTime = glfwGetTime();
 	auto start = std::chrono::steady_clock::now();
 	int frameCount = 0;
 
 	while (!glfwWindowShouldClose(window))
 	{
+		// Delta Time
+		float deltaTime = glfwGetTime() - checkedTime;
+
 		// FPS Calculator
 		frameCount++;
 		auto now = std::chrono::steady_clock::now();
@@ -99,6 +114,11 @@ int main(void)
 			Game::main.UpdateProjection();
 		}
 
+		glm::vec3 up = Util::Rotate(glm::vec3(0.0f, 1.0f, 0.0f), Game::main.cameraRotation);
+		glm::vec3 center = Game::main.cameraPosition + Util::Rotate(glm::vec3(0.0f, 0.0f, -1.0f), Game::main.cameraRotation);
+		Game::main.view = glm::lookAt(Game::main.cameraPosition, center, up);
+
+		// std::cout << std::to_string(up.x) + " / " + std::to_string(up.y) + " / " + std::to_string(up.z) << std::endl;
 
 		// Get Meta Input
 		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -106,6 +126,29 @@ int main(void)
 			glfwSetWindowShouldClose(window, true);
 		}
 
+
+		bool moveForward = ((glfwGetKey(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS));
+		bool moveBack = ((glfwGetKey(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS));
+		bool moveRight = ((glfwGetKey(Game::main.window, Game::main.moveRightKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveRightKey) == GLFW_PRESS));
+		bool moveLeft = ((glfwGetKey(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS));
+
+		if (moveForward)
+		{
+			Game::main.cameraPosition.z += Game::main.cameraSpeed * deltaTime;
+		}
+		else if (moveBack)
+		{
+			Game::main.cameraPosition.z -= Game::main.cameraSpeed * deltaTime;
+		}
+
+		if (moveRight)
+		{
+			Game::main.cameraPosition.x += Game::main.cameraSpeed * deltaTime;
+		}
+		else if (moveLeft)
+		{
+			Game::main.cameraPosition.x -= Game::main.cameraSpeed * deltaTime;
+		}
 
 		// Update
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -115,8 +158,11 @@ int main(void)
 
 		if (focus && !windowMoved)
 		{
-			// Simulate the world and whatnot.
+			renderer.PrepareCube(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), test.ID);
 		}
+
+		Game::main.renderer->Display();
+		Game::main.renderer->ResetBuffers();
 
 		glfwSwapBuffers(window);
 		windowMoved = 0;

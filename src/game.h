@@ -1,16 +1,25 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
+#include <map>
+#include <string>
+
+#include "renderer.h"
+
 enum class ProjectionType { perspective, orthographic };
+
+enum class InputType { button, trigger, stickPos, stickNeg };
 
 class Game
 {
 public:
 	static Game main;
 	GLFWwindow* window;
+
+	Renderer* renderer;
+	std::map<std::string, Texture*> textureMap;
 
 	int windowWidth = 1280;
 	int windowHeight = 720;
@@ -19,17 +28,31 @@ public:
 	glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::vec3 cameraRotation = glm::vec3(0.0f, 0.0f, 0.0f);
 
+	float cameraSpeed = 0.01f;
+
 	glm::mat4 view;
 	glm::mat4 projection;
 
-	float farClip = 0.0f;
-	float nearClip = 0.0f;
+	float farClip = 100.0f;
+	float nearClip = 2.0f;
 
 	float fieldOfView = 90.0f;
 
 	ProjectionType projectionType = ProjectionType::perspective;
 
 	void UpdateProjection();
+
+	// Keyboard and Mouse Mappings
+	int clickKey = GLFW_MOUSE_BUTTON_1;
+
+	int moveForwardKey = GLFW_KEY_W;
+	int moveBackKey = GLFW_KEY_S;
+
+	int moveRightKey = GLFW_KEY_D;
+	int moveLeftKey = GLFW_KEY_A;
+
+	int moveUpKey = GLFW_KEY_KP_ADD;
+	int moveDownKey = GLFW_KEY_KP_SUBTRACT;
 };
 
 #endif

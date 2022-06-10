@@ -8,6 +8,7 @@
 #include <glad/glad.h>
 
 #include "shader.h"
+#include "texture.h"
 
 struct Vertex
 {
@@ -42,6 +43,12 @@ struct Batch
 	int index = 0;
 };
 
+struct Bundle
+{
+	int batch;
+	float location;
+};
+
 class Renderer
 {
 public:
@@ -63,7 +70,7 @@ public:
 	void PrepareQuad(Quad& input, int textureID);
 	void PrepareQuad(glm::vec2 size, glm::vec3 position, glm::vec3 rotation, glm::vec4 color, int textureID);
 
-	Batch& DetermineBatch(int textureID);
+	Bundle DetermineBatch(int textureID);
 
 	void Display();
 	void ResetBuffers();
