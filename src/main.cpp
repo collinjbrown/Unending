@@ -120,7 +120,11 @@ int main(void)
 		glm::vec3 up = Util::Rotate(glm::vec3(0.0f, 1.0f, 0.0f), Game::main.cameraRotation);
 		glm::vec3 center = Game::main.cameraPosition + Util::Rotate(glm::vec3(0.0f, 0.0f, -1.0f), Game::main.cameraRotation);
 		Game::main.view = glm::lookAt(Game::main.cameraPosition, center, up);
-		Game::main.view = glm::inverse(Game::main.view);
+
+		if (Game::main.projectionType == ProjectionType::perspective)
+		{
+			Game::main.view = glm::inverse(Game::main.view);
+		}
 
 
 		// Get Meta Input
@@ -136,6 +140,16 @@ int main(void)
 		bool moveDown = ((glfwGetKey(Game::main.window, Game::main.moveDownKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveDownKey) == GLFW_PRESS));
 		bool moveForward = ((glfwGetKey(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS));
 		bool moveBack = ((glfwGetKey(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS));
+
+		bool rotX = ((glfwGetKey(Game::main.window, Game::main.rotateXKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.rotateXKey) == GLFW_PRESS));
+		bool unrotX = ((glfwGetKey(Game::main.window, Game::main.unrotateXKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.unrotateXKey) == GLFW_PRESS));
+		bool rotY = ((glfwGetKey(Game::main.window, Game::main.rotateYKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.rotateYKey) == GLFW_PRESS));
+		bool unrotY = ((glfwGetKey(Game::main.window, Game::main.unrotateYKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.unrotateYKey) == GLFW_PRESS));
+		bool rotZ = ((glfwGetKey(Game::main.window, Game::main.rotateZKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.rotateZKey) == GLFW_PRESS));
+		bool unrotZ = ((glfwGetKey(Game::main.window, Game::main.unrotateZKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.unrotateZKey) == GLFW_PRESS));
+
+		bool zoomIn = ((glfwGetKey(Game::main.window, Game::main.zoomInKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.zoomInKey) == GLFW_PRESS));
+		bool zoomOut = ((glfwGetKey(Game::main.window, Game::main.zoomOutKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.zoomOutKey) == GLFW_PRESS));
 
 		if (moveRight)
 		{
@@ -164,6 +178,42 @@ int main(void)
 			Game::main.cameraPosition.z -= Game::main.cameraSpeed * deltaTime;
 		}
 
+		if (rotX)
+		{
+			Game::main.cameraRotation.x += Game::main.rotationSpeed * deltaTime;
+		}
+		else if (unrotX)
+		{
+			Game::main.cameraRotation.x -= Game::main.rotationSpeed * deltaTime;
+		}
+
+		if (rotY)
+		{
+			Game::main.cameraRotation.y += Game::main.rotationSpeed * deltaTime;
+		}
+		else if (unrotY)
+		{
+			Game::main.cameraRotation.y -= Game::main.rotationSpeed * deltaTime;
+		}
+
+		if (rotZ)
+		{
+			Game::main.cameraRotation.z += Game::main.rotationSpeed * deltaTime;
+		}
+		else if (unrotZ)
+		{
+			Game::main.cameraRotation.z -= Game::main.rotationSpeed * deltaTime;
+		}
+
+		if (zoomIn)
+		{
+			Game::main.zoom += Game::main.zoomSpeed * deltaTime;
+		}
+		else if (zoomOut)
+		{
+			Game::main.zoom -= Game::main.zoomSpeed * deltaTime;
+		}
+
 		// Update
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -174,7 +224,14 @@ int main(void)
 
 		if (focus && !windowMoved)
 		{
-			renderer.PrepareCube(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), test.ID);
+			for (int x = 0; x < 20; x++)
+			{
+				for (int z = 0; z < 20; z++)
+				{
+					renderer.PrepareCube(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(10.0f * x, 0.0f, -10.f * z), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), test.ID);
+				}
+			}
+			// renderer.PrepareCube(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), test.ID);
 		}
 
 		Game::main.renderer->Display();

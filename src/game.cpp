@@ -9,7 +9,7 @@ void Game::UpdateProjection()
 		float halfWidth = windowWidth / 2.0f;
 		float halfHeight = windowHeight / 2.0f;
 
-		this->projection = glm::ortho(-halfWidth, halfWidth, -halfWidth, halfHeight, nearClip, farClip);
+		this->projection = glm::ortho(-halfWidth * zoom, halfWidth * zoom, -halfWidth * zoom, halfHeight * zoom, nearClip, farClip);
 
 	}
 	else if (projectionType == ProjectionType::perspective)

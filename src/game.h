@@ -28,7 +28,10 @@ public:
 	glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::vec3 cameraRotation = glm::vec3(0.0f, 0.0f, 0.0f);
 
+	float zoom = 1.0f;
 	float cameraSpeed = 0.01f;
+	float rotationSpeed = 0.001f;
+	float zoomSpeed = 0.01f;
 
 	glm::mat4 view;
 	glm::mat4 projection;
@@ -45,14 +48,26 @@ public:
 	// Keyboard and Mouse Mappings
 	int clickKey = GLFW_MOUSE_BUTTON_1;
 
-	int moveForwardKey = GLFW_KEY_KP_ADD;
-	int moveBackKey = GLFW_KEY_KP_SUBTRACT;
+	int moveForwardKey = GLFW_KEY_R;
+	int moveBackKey = GLFW_KEY_F;
 
 	int moveRightKey = GLFW_KEY_D;
 	int moveLeftKey = GLFW_KEY_A;
 
 	int moveUpKey = GLFW_KEY_W;
 	int moveDownKey = GLFW_KEY_S;
+
+	int rotateXKey = GLFW_KEY_KP_2;
+	int unrotateXKey = GLFW_KEY_KP_8;
+
+	int rotateYKey = GLFW_KEY_KP_6;
+	int unrotateYKey = GLFW_KEY_KP_4;
+
+	int rotateZKey = GLFW_KEY_KP_9;
+	int unrotateZKey = GLFW_KEY_KP_7;
+
+	int zoomInKey = GLFW_KEY_KP_ADD;
+	int zoomOutKey = GLFW_KEY_KP_SUBTRACT;
 };
 
 #endif
