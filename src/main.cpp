@@ -149,8 +149,12 @@ int main(void)
 		{
 			glfwSetWindowShouldClose(window, true);
 		}
+		
+		Game::main.cameraRotation.x = fmod(Game::main.cameraRotation.x, 6.3f);
+		Game::main.cameraRotation.y = fmod(Game::main.cameraRotation.y, 6.3f);
+		Game::main.cameraRotation.z = fmod(Game::main.cameraRotation.z, 6.3f);
 
-		Game::main.cameraRotation = glm::vec3(fmod(Game::main.cameraRotation.x, 180), fmod(Game::main.cameraRotation.y, 180), fmod(Game::main.cameraRotation.z, 180));
+		// Game::main.cameraRotation = glm::vec3(fmod(Game::main.cameraRotation.x, 6.0f), fmod(Game::main.cameraRotation.y, 6.0f), fmod(Game::main.cameraRotation.z, 6.0f));
 
 		// Update
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);

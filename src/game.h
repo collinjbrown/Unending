@@ -53,8 +53,8 @@ public:
 	// Keyboard and Mouse Mappings
 	int clickKey = GLFW_MOUSE_BUTTON_1;
 
-	int moveForwardKey = GLFW_KEY_R;
-	int moveBackKey = GLFW_KEY_F;
+	int moveForwardKey = GLFW_KEY_E;
+	int moveBackKey = GLFW_KEY_C;
 
 	int moveRightKey = GLFW_KEY_D;
 	int moveLeftKey = GLFW_KEY_A;

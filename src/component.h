@@ -15,6 +15,7 @@ static int animationComponentID				= 3;
 static int animationControllerComponentID	= 4;
 static int inputComponentID					= 5;
 static int cameraFollowComponentID			= 6;
+static int billboardingComponentID			= 7;
 
 static int playerAnimControllerSubID		= 1;
 
@@ -110,6 +111,12 @@ public:
 	bool lockZ;
 
 	CameraFollowComponent(Entity* entity, bool active, glm::vec3 offset, float distance, float speed, bool track, bool lockX, bool lockY, bool lockZ);
+};
+
+class BillboardingComponent : public Component
+{
+public:
+	BillboardingComponent(Entity* entity, bool active);
 };
 
 #endif

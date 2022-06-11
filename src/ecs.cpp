@@ -64,6 +64,7 @@ void ECS::Init()
 	componentBlocks.push_back(new ComponentBlock(new CubeSystem(), cubeComponentID));
 	componentBlocks.push_back(new ComponentBlock(new AnimationControllerSystem(), animationControllerComponentID));
 	componentBlocks.push_back(new ComponentBlock(new AnimationSystem(), animationComponentID));
+	componentBlocks.push_back(new ComponentBlock(new BillboardingSystem(), billboardingComponentID));
 	componentBlocks.push_back(new ComponentBlock(new CameraFollowSystem(), cameraFollowComponentID));
 }
 
@@ -99,6 +100,7 @@ void ECS::Update(float deltaTime)
 		ECS::main.RegisterComponent(new AnimationComponent(player, true, glm::vec3(0.0f, (testIdle->height / testIdle->rows) * 0.5f * 0.4f, 0.0f), testIdle, "idle", 0.2f, 0.2f, false, false, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)), player);
 		AnimationComponent* a = (AnimationComponent*)player->componentIDMap[animationComponentID];
 		ECS::main.RegisterComponent(new PlayerAnimationControllerComponent(player, true, a), player);
+		ECS::main.RegisterComponent(new BillboardingComponent(player, true), player);
 		ECS::main.RegisterComponent(new CameraFollowComponent(player, true, glm::vec3(-295.0f, 615.0f, 1760.0f), 500.0f, 10.0f, true, false, false, false), player);
 		ECS::main.RegisterComponent(new InputComponent(player, true, true), player);
 	}
@@ -294,6 +296,17 @@ CameraFollowComponent::CameraFollowComponent(Entity* entity, bool active, glm::v
 
 #pragma endregion
 
+#pragma region Billboarding Component
+
+BillboardingComponent::BillboardingComponent(Entity* entity, bool active)
+{
+	this->ID = billboardingComponentID;
+	this->entity = entity;
+	this->active = active;
+}
+
+#pragma endregion
+
 #pragma endregion
 
 #pragma region Systems
@@ -381,8 +394,6 @@ void AnimationSystem::Update(int activeScene, float deltaTime)
 			}
 
 			PositionComponent* pos = (PositionComponent*)a->entity->componentIDMap[positionComponentID];
-			
-			pos->rotation = Game::main.cameraRotation;
 			
 			Game::main.renderer->PrepareQuad(glm::vec2(activeAnimation->width * a->scaleX, activeAnimation->height * a->scaleY), a->offset + pos->position, pos->rotation, a->color, activeAnimation->ID, cellX, cellY, activeAnimation->columns, activeAnimation->rows, a->flippedX, a->flippedY);
 		}
@@ -519,28 +530,34 @@ void InputSystem::Update(int activeScene, float deltaTime)
 
 			if (rotX)
 			{
+				camFollower->resetting = false;
 				Game::main.cameraRotation.x += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 			}
 			else if (unrotX)
 			{
+				camFollower->resetting = false;
 				Game::main.cameraRotation.x -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 			}
 
 			if (rotY)
 			{
+				camFollower->resetting = false;
 				Game::main.cameraRotation.y += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 			}
 			else if (unrotY)
 			{
+				camFollower->resetting = false;
 				Game::main.cameraRotation.y -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 			}
 
 			if (rotZ)
 			{
+				camFollower->resetting = false;
 				Game::main.cameraRotation.z += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 			}
 			else if (unrotZ)
 			{
+				camFollower->resetting = false;
 				Game::main.cameraRotation.z -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 			}
 
@@ -622,7 +639,6 @@ void InputSystem::Update(int activeScene, float deltaTime)
 void InputSystem::AddComponent(Component* component)
 {
 	inputs.push_back((InputComponent*)component);
-
 }
 
 void InputSystem::PurgeEntity(Entity* e)
@@ -633,6 +649,46 @@ void InputSystem::PurgeEntity(Entity* e)
 		{
 			InputComponent* s = inputs[i];
 			inputs.erase(std::remove(inputs.begin(), inputs.end(), s), inputs.end());
+			delete s;
+		}
+	}
+}
+
+#pragma endregion
+
+#pragma region Billboarding System
+
+void BillboardingSystem::Update(int activeScene, float deltaTime)
+{
+	for (int i = 0; i < boards.size(); i++)
+	{
+		BillboardingComponent* board = boards[i];
+
+		if (board->active && board->entity->GetScene() == activeScene ||
+			board->active && board->entity->GetScene() == 0)
+		{
+			PositionComponent* pos = (PositionComponent*)board->entity->componentIDMap[positionComponentID];
+
+			pos->rotation = Game::main.cameraRotation;
+
+			// std::cout << "Character Rotation: " + std::to_string(pos->rotation.x) + " / " + std::to_string(pos->rotation.y) + " / " + std::to_string(pos->rotation.z) << std::endl;
+		}
+	}
+}
+
+void BillboardingSystem::AddComponent(Component* component)
+{
+	boards.push_back((BillboardingComponent*)component);
+}
+
+void BillboardingSystem::PurgeEntity(Entity* e)
+{
+	for (int i = 0; i < boards.size(); i++)
+	{
+		if (boards[i]->entity == e)
+		{
+			BillboardingComponent* s = boards[i];
+			boards.erase(std::remove(boards.begin(), boards.end(), s), boards.end());
 			delete s;
 		}
 	}
