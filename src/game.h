@@ -27,7 +27,8 @@ public:
 
 	glm::vec2 mousePosition = glm::vec2(0.0f, 0.0f);
 	glm::vec3 cameraPosition = glm::vec3(900.0f, 500.0f, 300.0f);
-	glm::vec3 cameraRotation = glm::vec3(44.5f, -45.0f, 0.0f);
+	glm::vec3 cameraRotation = glm::vec3(0.77f, -0.77f, 0.0f);
+	glm::vec3 baseCameraRotation = glm::vec3(0.77f, -0.77f, 0.0f);
 
 	float orthographicSpeedModifier = 100.0f;
 
@@ -53,14 +54,27 @@ public:
 	// Keyboard and Mouse Mappings
 	int clickKey = GLFW_MOUSE_BUTTON_1;
 
-	int moveForwardKey = GLFW_KEY_E;
-	int moveBackKey = GLFW_KEY_C;
+	int moveForwardKey = GLFW_KEY_W;
+	int moveBackKey = GLFW_KEY_S;
 
 	int moveRightKey = GLFW_KEY_D;
 	int moveLeftKey = GLFW_KEY_A;
 
-	int moveUpKey = GLFW_KEY_W;
-	int moveDownKey = GLFW_KEY_S;
+	int cubeControlKey = GLFW_KEY_LEFT_CONTROL;
+
+	/*int moveUpKey = GLFW_KEY_W;
+	int moveDownKey = GLFW_KEY_S;*/
+
+	int camForwardKey = GLFW_KEY_O;
+	int camBackKey = GLFW_KEY_P;
+
+	int camRightKey = GLFW_KEY_RIGHT;
+	int camLeftKey = GLFW_KEY_LEFT;
+
+	int camUpKey = GLFW_KEY_UP;
+	int camDownKey = GLFW_KEY_DOWN;
+
+	int freeCamKey = GLFW_KEY_RIGHT_CONTROL;
 
 	int rotateXKey = GLFW_KEY_KP_2;
 	int unrotateXKey = GLFW_KEY_KP_8;
@@ -74,7 +88,6 @@ public:
 	int zoomInKey = GLFW_KEY_KP_ADD;
 	int zoomOutKey = GLFW_KEY_KP_SUBTRACT;
 
-	int freeCamKey = GLFW_KEY_LEFT_CONTROL;
 	int resetRotationKey = GLFW_KEY_R;
 };
 

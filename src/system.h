@@ -11,6 +11,7 @@ class AnimationControllerComponent;
 class InputComponent;
 class CameraFollowComponent;
 class BillboardingComponent;
+class ActorComponent;
 
 class System
 {
@@ -84,6 +85,17 @@ class BillboardingSystem : public System
 {
 public:
 	std::vector<BillboardingComponent*> boards;
+
+	void Update(int activeScene, float deltaTime);
+
+	void AddComponent(Component* component);
+
+	void PurgeEntity(Entity* e);
+};
+
+class TurnSystem : public System
+{
+	std::vector<ActorComponent*> actors;
 
 	void Update(int activeScene, float deltaTime);
 

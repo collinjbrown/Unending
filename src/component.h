@@ -16,6 +16,7 @@ static int animationControllerComponentID	= 4;
 static int inputComponentID					= 5;
 static int cameraFollowComponentID			= 6;
 static int billboardingComponentID			= 7;
+static int actorComponentID					= 8;
 
 static int playerAnimControllerSubID		= 1;
 
@@ -39,12 +40,16 @@ public:
 class CubeComponent : public Component
 {
 public:
+	int x;
+	int y;
+	int z;
+
 	glm::vec3 size;
 	glm::vec4 color;
 
 	Texture* texture;
 
-	CubeComponent(Entity* entity, bool active, glm::vec3 size, glm::vec4 color, Texture* texture);
+	CubeComponent(Entity* entity, bool active, int x, int y, int z, glm::vec3 size, glm::vec4 color, Texture* texture);
 };
 
 class AnimationComponent : public Component
@@ -93,7 +98,10 @@ class InputComponent : public Component
 public:
 	bool acceptInput;
 
-	InputComponent(Entity* entity, bool active, bool acceptInput);
+	float lastRoll;
+	float rollDelay;
+
+	InputComponent(Entity* entity, bool active, bool acceptInput, float rollDelay);
 };
 
 class CameraFollowComponent : public Component
@@ -117,6 +125,22 @@ class BillboardingComponent : public Component
 {
 public:
 	BillboardingComponent(Entity* entity, bool active);
+};
+
+enum class Face { front, back, left, right, top, bottom };
+class ActorComponent : public Component
+{
+public:
+	Face face;
+	Entity* cube;
+
+	float speed;
+	bool moving;
+	glm::vec3 target;
+
+	glm::vec3 baseRotation;
+
+	ActorComponent(Entity* entity, bool active, float speed, Face face, Entity* cube);
 };
 
 #endif
