@@ -31,7 +31,7 @@ public:
 
 	float orthographicSpeedModifier = 100.0f;
 
-	float zoom = 4.5f;
+	float zoom = 8.5f;
 	float cameraSpeed = 80.0f;
 	float rotationSpeed = 20.0f;
 	float zoomSpeed = 10.0f;

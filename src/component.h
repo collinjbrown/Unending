@@ -14,6 +14,7 @@ static int cubeComponentID					= 2;
 static int animationComponentID				= 3;
 static int animationControllerComponentID	= 4;
 static int inputComponentID					= 5;
+static int cameraFollowComponentID			= 6;
 
 static int playerAnimControllerSubID		= 1;
 
@@ -92,6 +93,20 @@ public:
 	bool acceptInput;
 
 	InputComponent(Entity* entity, bool active, bool acceptInput);
+};
+
+class CameraFollowComponent : public Component
+{
+public:
+	glm::vec3 offset;
+
+	float speed;
+
+	bool lockX;
+	bool lockY;
+	bool lockZ;
+
+	CameraFollowComponent(Entity* entity, bool active, glm::vec3 offset, float speed, bool lockX, bool lockY, bool lockZ);
 };
 
 #endif

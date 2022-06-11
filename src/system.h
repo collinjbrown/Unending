@@ -8,6 +8,8 @@ class PositionComponent;
 class CubeComponent;
 class AnimationComponent;
 class AnimationControllerComponent;
+class InputComponent;
+class CameraFollowComponent;
 
 class System
 {
@@ -45,6 +47,18 @@ class AnimationSystem : public System
 {
 public:
 	std::vector<AnimationComponent*> anims;
+
+	void Update(int activeScene, float deltaTime);
+
+	void AddComponent(Component* component);
+
+	void PurgeEntity(Entity* e);
+};
+
+class CameraFollowSystem : public System
+{
+public:
+	std::vector<CameraFollowComponent*> cams;
 
 	void Update(int activeScene, float deltaTime);
 

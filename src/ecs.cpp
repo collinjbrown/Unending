@@ -255,7 +255,6 @@ PlayerAnimationControllerComponent::PlayerAnimationControllerComponent(Entity* e
 
 #pragma region Input Component
 
-
 InputComponent::InputComponent(Entity* entity, bool active, bool acceptInput)
 {
 	this->ID = inputComponentID;
@@ -263,6 +262,23 @@ InputComponent::InputComponent(Entity* entity, bool active, bool acceptInput)
 	this->active = active;
 
 	this->acceptInput = acceptInput;
+}
+
+#pragma endregion
+
+#pragma region Camera Follow Component
+
+CameraFollowComponent::CameraFollowComponent(Entity* entity, bool active, glm::vec3 offset, float speed, bool lockX, bool lockY, bool lockZ)
+{
+	this->ID = cameraFollowComponentID;
+	this->entity = entity;
+	this->active = active;
+
+	this->offset = offset;
+	this->speed = speed;
+	this->lockX = lockX;
+	this->lockY = lockY;
+	this->lockZ = lockZ;
 }
 
 #pragma endregion
@@ -411,6 +427,44 @@ void AnimationControllerSystem::PurgeEntity(Entity* e)
 		{
 			AnimationControllerComponent* s = controllers[i];
 			controllers.erase(std::remove(controllers.begin(), controllers.end(), s), controllers.end());
+			delete s;
+		}
+	}
+}
+
+#pragma endregion
+
+#pragma region Camera Follow System
+
+void CameraFollowSystem::Update(int activeScene, float deltaTime)
+{
+	for (int i = 0; i < cams.size(); i++)
+	{
+		CameraFollowComponent* c = cams[i];
+
+		if (c->active && c->entity->GetScene() == activeScene ||
+			c->active && c->entity->GetScene() == 0)
+		{
+			PositionComponent* pos = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
+
+			
+		}
+	}
+}
+
+void CameraFollowSystem::AddComponent(Component* component)
+{
+	cams.push_back((CameraFollowComponent*)component);
+}
+
+void CameraFollowSystem::PurgeEntity(Entity* e)
+{
+	for (int i = 0; i < cams.size(); i++)
+	{
+		if (cams[i]->entity == e)
+		{
+			CameraFollowComponent* s = cams[i];
+			cams.erase(std::remove(cams.begin(), cams.end(), s), cams.end());
 			delete s;
 		}
 	}
