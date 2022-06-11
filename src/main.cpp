@@ -91,6 +91,7 @@ int main(void)
 	{
 		// Delta Time
 		float deltaTime = glfwGetTime() - checkedTime;
+		checkedTime = glfwGetTime();
 
 		// FPS Calculator
 		frameCount++;
@@ -99,6 +100,10 @@ int main(void)
 
 		if (diff >= std::chrono::seconds(1))
 		{
+			/*std::cout << "Camera Position: " + std::to_string(Game::main.cameraPosition.x) + " / " + std::to_string(Game::main.cameraPosition.y) + " / " + std::to_string(Game::main.cameraPosition.z) << std::endl;
+			std::cout << "Camera Rotation: " + std::to_string(Game::main.cameraRotation.x) + " / " + std::to_string(Game::main.cameraRotation.y) + " / " + std::to_string(Game::main.cameraRotation.z) << std::endl;
+			std::cout << "Camera Zoom: " + std::to_string(Game::main.zoom) << std::endl;*/
+
 			start = now;
 			std::cout << "Frame Count: " + std::to_string(frameCount) << std::endl;
 
@@ -114,9 +119,9 @@ int main(void)
 		{
 			Game::main.windowWidth = w;
 			Game::main.windowHeight = h;
-			Game::main.UpdateProjection();
 		}
 
+		Game::main.UpdateProjection();
 		glm::vec3 up = Util::Rotate(glm::vec3(0.0f, 1.0f, 0.0f), Game::main.cameraRotation);
 		glm::vec3 center = Game::main.cameraPosition + Util::Rotate(glm::vec3(0.0f, 0.0f, -1.0f), Game::main.cameraRotation);
 		Game::main.view = glm::lookAt(Game::main.cameraPosition, center, up);
@@ -132,7 +137,6 @@ int main(void)
 		{
 			glfwSetWindowShouldClose(window, true);
 		}
-
 
 		bool moveRight = ((glfwGetKey(Game::main.window, Game::main.moveRightKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveRightKey) == GLFW_PRESS));
 		bool moveLeft = ((glfwGetKey(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS));
@@ -151,58 +155,65 @@ int main(void)
 		bool zoomIn = ((glfwGetKey(Game::main.window, Game::main.zoomInKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.zoomInKey) == GLFW_PRESS));
 		bool zoomOut = ((glfwGetKey(Game::main.window, Game::main.zoomOutKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.zoomOutKey) == GLFW_PRESS));
 
+		float oMod = Game::main.orthographicSpeedModifier;
+		if (Game::main.projectionType == ProjectionType::perspective) oMod = 1.0f;
+
+		glm::vec3 relRight = Util::Rotate(glm::vec3(1.0f, 0.0f, 0.0f), Game::main.cameraRotation);
+		glm::vec3 relForward = Util::Rotate(glm::vec3(0.0f, 0.0f, 1.0f), Game::main.cameraRotation);
+		glm::vec3 relUp = Util::Rotate(glm::vec3(0.0f, 1.0f, 0.0f), Game::main.cameraRotation);
+
 		if (moveRight)
 		{
-			Game::main.cameraPosition.x += Game::main.cameraSpeed * deltaTime;
+			Game::main.cameraPosition += relRight * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
 		}
 		else if (moveLeft)
 		{
-			Game::main.cameraPosition.x -= Game::main.cameraSpeed * deltaTime;
+			Game::main.cameraPosition -= relRight * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
 		}
 
 		if (moveUp)
 		{
-			Game::main.cameraPosition.y += Game::main.cameraSpeed * deltaTime;
+			Game::main.cameraPosition += relUp * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
 		}
 		else if (moveDown)
 		{
-			Game::main.cameraPosition.y -= Game::main.cameraSpeed * deltaTime;
+			Game::main.cameraPosition -= relUp * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
 		}
 
 		if (moveForward)
 		{
-			Game::main.cameraPosition.z += Game::main.cameraSpeed * deltaTime;
+			Game::main.cameraPosition += relForward * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
 		}
 		else if (moveBack)
 		{
-			Game::main.cameraPosition.z -= Game::main.cameraSpeed * deltaTime;
+			Game::main.cameraPosition -= relForward * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
 		}
 
 		if (rotX)
 		{
-			Game::main.cameraRotation.x += Game::main.rotationSpeed * deltaTime;
+			Game::main.cameraRotation.x += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 		}
 		else if (unrotX)
 		{
-			Game::main.cameraRotation.x -= Game::main.rotationSpeed * deltaTime;
+			Game::main.cameraRotation.x -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 		}
 
 		if (rotY)
 		{
-			Game::main.cameraRotation.y += Game::main.rotationSpeed * deltaTime;
+			Game::main.cameraRotation.y += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 		}
 		else if (unrotY)
 		{
-			Game::main.cameraRotation.y -= Game::main.rotationSpeed * deltaTime;
+			Game::main.cameraRotation.y -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 		}
 
 		if (rotZ)
 		{
-			Game::main.cameraRotation.z += Game::main.rotationSpeed * deltaTime;
+			Game::main.cameraRotation.z += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 		}
 		else if (unrotZ)
 		{
-			Game::main.cameraRotation.z -= Game::main.rotationSpeed * deltaTime;
+			Game::main.cameraRotation.z -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 		}
 
 		if (zoomIn)
@@ -214,6 +225,8 @@ int main(void)
 			Game::main.zoom -= Game::main.zoomSpeed * deltaTime;
 		}
 
+		Game::main.cameraRotation = glm::vec3(fmod(Game::main.cameraRotation.x, 180), fmod(Game::main.cameraRotation.y, 180), fmod(Game::main.cameraRotation.z, 180));
+
 		// Update
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -224,9 +237,9 @@ int main(void)
 
 		if (focus && !windowMoved)
 		{
-			for (int x = 0; x < 20; x++)
+			for (int x = 0; x < 5; x++)
 			{
-				for (int z = 0; z < 20; z++)
+				for (int z = 0; z < 5; z++)
 				{
 					renderer.PrepareCube(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(10.0f * x, 0.0f, -10.f * z), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), test.ID);
 				}

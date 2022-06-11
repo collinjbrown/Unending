@@ -25,23 +25,25 @@ public:
 	int windowHeight = 720;
 
 	glm::vec2 mousePosition = glm::vec2(0.0f, 0.0f);
-	glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-	glm::vec3 cameraRotation = glm::vec3(0.0f, 0.0f, 0.0f);
+	glm::vec3 cameraPosition = glm::vec3(900.0f, 500.0f, 200.0f);
+	glm::vec3 cameraRotation = glm::vec3(44.5f, -45.0f, 0.0f);
 
-	float zoom = 1.0f;
-	float cameraSpeed = 0.01f;
-	float rotationSpeed = 0.001f;
-	float zoomSpeed = 0.01f;
+	float orthographicSpeedModifier = 100.0f;
+
+	float zoom = 4.5f;
+	float cameraSpeed = 80.0f;
+	float rotationSpeed = 20.0f;
+	float zoomSpeed = 10.0f;
 
 	glm::mat4 view;
 	glm::mat4 projection;
 
 	float nearClip = 0.1f;
-	float farClip = 1500.0f;
+	float farClip = 15000.0f;
 
 	float fieldOfView = 180.0f;
 
-	ProjectionType projectionType = ProjectionType::perspective;
+	ProjectionType projectionType = ProjectionType::orthographic;
 
 	void UpdateProjection();
 
