@@ -73,6 +73,8 @@ public:
 
 	int zoomInKey = GLFW_KEY_KP_ADD;
 	int zoomOutKey = GLFW_KEY_KP_SUBTRACT;
+
+	int freeCamKey = GLFW_KEY_LEFT_CONTROL;
 };
 
 #endif

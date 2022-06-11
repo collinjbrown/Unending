@@ -13,3 +13,8 @@ glm::vec3 Util::RotateRelative(glm::vec3 relative, glm::vec3 position, glm::vec3
 {
 	return Rotate(relative - position, rotation) + relative;
 }
+
+glm::vec3 Util::Lerp(glm::vec3 a, glm::vec3 b, float step)
+{
+	return (a * (1.0f - step) + (b * step));
+}

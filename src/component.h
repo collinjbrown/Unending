@@ -99,14 +99,16 @@ class CameraFollowComponent : public Component
 {
 public:
 	glm::vec3 offset;
+	float distance;
 
 	float speed;
+	bool track;
 
 	bool lockX;
 	bool lockY;
 	bool lockZ;
 
-	CameraFollowComponent(Entity* entity, bool active, glm::vec3 offset, float speed, bool lockX, bool lockY, bool lockZ);
+	CameraFollowComponent(Entity* entity, bool active, glm::vec3 offset, float distance, float speed, bool track, bool lockX, bool lockY, bool lockZ);
 };
 
 #endif

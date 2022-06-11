@@ -67,4 +67,16 @@ public:
 	void PurgeEntity(Entity* e);
 };
 
+class InputSystem : public System
+{
+public:
+	std::vector<InputComponent*> inputs;
+
+	void Update(int activeScene, float deltaTime);
+
+	void AddComponent(Component* component);
+
+	void PurgeEntity(Entity* e);
+};
+
 #endif

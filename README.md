@@ -1,2 +1,5 @@
 # Unending
- A puzzle game about emanation and folding space....
+ A puzzle game about folding....
+
+# To Do
+- Fix the sprite billboarding code.

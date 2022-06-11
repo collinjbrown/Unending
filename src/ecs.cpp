@@ -59,9 +59,11 @@ uint32_t ECS::GetID()
 
 void ECS::Init()
 {
+	componentBlocks.push_back(new ComponentBlock(new InputSystem(), inputComponentID));
 	componentBlocks.push_back(new ComponentBlock(new CubeSystem(), cubeComponentID));
 	componentBlocks.push_back(new ComponentBlock(new AnimationControllerSystem(), animationControllerComponentID));
 	componentBlocks.push_back(new ComponentBlock(new AnimationSystem(), animationComponentID));
+	componentBlocks.push_back(new ComponentBlock(new CameraFollowSystem(), cameraFollowComponentID));
 }
 
 void ECS::Update(float deltaTime)
@@ -96,6 +98,8 @@ void ECS::Update(float deltaTime)
 		ECS::main.RegisterComponent(new AnimationComponent(player, true, glm::vec3(0.0f, (testIdle->height / testIdle->rows) * 0.5f * 0.4f, 0.0f), testIdle, "idle", 0.2f, 0.2f, false, false, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)), player);
 		AnimationComponent* a = (AnimationComponent*)player->componentIDMap[animationComponentID];
 		ECS::main.RegisterComponent(new PlayerAnimationControllerComponent(player, true, a), player);
+		ECS::main.RegisterComponent(new CameraFollowComponent(player, true, glm::vec3(-295.0f, 615.0f, 1760.0f), 500.0f, 10.0f, true, false, false, false), player);
+		ECS::main.RegisterComponent(new InputComponent(player, true, true), player);
 	}
 
 	for (int i = 0; i < componentBlocks.size(); i++)
@@ -268,14 +272,18 @@ InputComponent::InputComponent(Entity* entity, bool active, bool acceptInput)
 
 #pragma region Camera Follow Component
 
-CameraFollowComponent::CameraFollowComponent(Entity* entity, bool active, glm::vec3 offset, float speed, bool lockX, bool lockY, bool lockZ)
+CameraFollowComponent::CameraFollowComponent(Entity* entity, bool active, glm::vec3 offset, float distance, float speed, bool track, bool lockX, bool lockY, bool lockZ)
 {
 	this->ID = cameraFollowComponentID;
 	this->entity = entity;
 	this->active = active;
 
 	this->offset = offset;
+	this->distance = distance;
+
 	this->speed = speed;
+	this->track = track;
+
 	this->lockX = lockX;
 	this->lockY = lockY;
 	this->lockZ = lockZ;
@@ -371,7 +379,9 @@ void AnimationSystem::Update(int activeScene, float deltaTime)
 
 			PositionComponent* pos = (PositionComponent*)a->entity->componentIDMap[positionComponentID];
 			
-			Game::main.renderer->PrepareQuad(glm::vec2(activeAnimation->width * a->scaleX, activeAnimation->height * a->scaleY), a->offset + pos->position, Game::main.cameraRotation, a->color, activeAnimation->ID, cellX, cellY, activeAnimation->columns, activeAnimation->rows, a->flippedX, a->flippedY);
+			pos->rotation = Game::main.cameraRotation;
+			
+			Game::main.renderer->PrepareQuad(glm::vec2(activeAnimation->width * a->scaleX, activeAnimation->height * a->scaleY), a->offset + pos->position, pos->rotation, a->color, activeAnimation->ID, cellX, cellY, activeAnimation->columns, activeAnimation->rows, a->flippedX, a->flippedY);
 		}
 	}
 }
@@ -442,12 +452,17 @@ void CameraFollowSystem::Update(int activeScene, float deltaTime)
 	{
 		CameraFollowComponent* c = cams[i];
 
-		if (c->active && c->entity->GetScene() == activeScene ||
-			c->active && c->entity->GetScene() == 0)
+		if (c->track)
 		{
-			PositionComponent* pos = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
+			if (c->active && c->entity->GetScene() == activeScene ||
+				c->active && c->entity->GetScene() == 0)
+			{
+				PositionComponent* pos = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
 
-			
+				glm::vec3 normalizedOffset = glm::normalize(Util::Rotate(c->offset, pos->rotation));
+
+				Game::main.cameraPosition = Util::Lerp(Game::main.cameraPosition, pos->position + (normalizedOffset * c->distance), deltaTime * c->speed);
+			}
 		}
 	}
 }
@@ -465,6 +480,142 @@ void CameraFollowSystem::PurgeEntity(Entity* e)
 		{
 			CameraFollowComponent* s = cams[i];
 			cams.erase(std::remove(cams.begin(), cams.end(), s), cams.end());
+			delete s;
+		}
+	}
+}
+
+#pragma endregion
+
+#pragma region Input System
+
+void InputSystem::Update(int activeScene, float deltaTime)
+{
+	for (int i = 0; i < inputs.size(); i++)
+	{
+		InputComponent* input = inputs[i];
+
+		if (input->active && input->entity->GetScene() == activeScene ||
+			input->active && input->entity->GetScene() == 0)
+		{
+			bool freeCam = ((glfwGetKey(Game::main.window, Game::main.freeCamKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.freeCamKey) == GLFW_PRESS));
+
+			CameraFollowComponent* camFollower = (CameraFollowComponent*)ECS::main.player->componentIDMap[cameraFollowComponentID];
+
+			bool rotX = ((glfwGetKey(Game::main.window, Game::main.rotateXKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.rotateXKey) == GLFW_PRESS));
+			bool unrotX = ((glfwGetKey(Game::main.window, Game::main.unrotateXKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.unrotateXKey) == GLFW_PRESS));
+			bool rotY = ((glfwGetKey(Game::main.window, Game::main.rotateYKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.rotateYKey) == GLFW_PRESS));
+			bool unrotY = ((glfwGetKey(Game::main.window, Game::main.unrotateYKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.unrotateYKey) == GLFW_PRESS));
+			bool rotZ = ((glfwGetKey(Game::main.window, Game::main.rotateZKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.rotateZKey) == GLFW_PRESS));
+			bool unrotZ = ((glfwGetKey(Game::main.window, Game::main.unrotateZKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.unrotateZKey) == GLFW_PRESS));
+
+			bool zoomIn = ((glfwGetKey(Game::main.window, Game::main.zoomInKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.zoomInKey) == GLFW_PRESS));
+			bool zoomOut = ((glfwGetKey(Game::main.window, Game::main.zoomOutKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.zoomOutKey) == GLFW_PRESS));
+
+
+			if (rotX)
+			{
+				Game::main.cameraRotation.x += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+			}
+			else if (unrotX)
+			{
+				Game::main.cameraRotation.x -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+			}
+
+			if (rotY)
+			{
+				Game::main.cameraRotation.y += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+			}
+			else if (unrotY)
+			{
+				Game::main.cameraRotation.y -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+			}
+
+			if (rotZ)
+			{
+				Game::main.cameraRotation.z += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+			}
+			else if (unrotZ)
+			{
+				Game::main.cameraRotation.z -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+			}
+
+			if (zoomIn)
+			{
+				Game::main.zoom += Game::main.zoomSpeed * deltaTime;
+			}
+			else if (zoomOut)
+			{
+				Game::main.zoom -= Game::main.zoomSpeed * deltaTime;
+			}
+
+			if (freeCam)
+			{
+				// camFollower->track = false;
+
+				bool moveRight = ((glfwGetKey(Game::main.window, Game::main.moveRightKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveRightKey) == GLFW_PRESS));
+				bool moveLeft = ((glfwGetKey(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS));
+				bool moveUp = ((glfwGetKey(Game::main.window, Game::main.moveUpKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveUpKey) == GLFW_PRESS));
+				bool moveDown = ((glfwGetKey(Game::main.window, Game::main.moveDownKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveDownKey) == GLFW_PRESS));
+				bool moveForward = ((glfwGetKey(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS));
+				bool moveBack = ((glfwGetKey(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS));
+
+				float oMod = Game::main.orthographicSpeedModifier;
+				if (Game::main.projectionType == ProjectionType::perspective) oMod = 1.0f;
+
+				glm::vec3 relRight = Util::Rotate(glm::vec3(1.0f, 0.0f, 0.0f), Game::main.cameraRotation);
+				glm::vec3 relForward = Util::Rotate(glm::vec3(0.0f, 0.0f, 1.0f), Game::main.cameraRotation);
+				glm::vec3 relUp = Util::Rotate(glm::vec3(0.0f, 1.0f, 0.0f), Game::main.cameraRotation);
+
+				if (moveRight)
+				{
+					Game::main.cameraPosition += relRight * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
+				}
+				else if (moveLeft)
+				{
+					Game::main.cameraPosition -= relRight * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
+				}
+
+				if (moveUp)
+				{
+					Game::main.cameraPosition += relUp * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
+				}
+				else if (moveDown)
+				{
+					Game::main.cameraPosition -= relUp * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
+				}
+
+				if (moveForward)
+				{
+					Game::main.cameraPosition += relForward * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
+				}
+				else if (moveBack)
+				{
+					Game::main.cameraPosition -= relForward * Game::main.cameraSpeed * deltaTime * oMod * (1.5f / Game::main.zoom);
+				}
+			}
+			else
+			{
+				camFollower->track = true;
+			}
+		}
+	}
+}
+
+void InputSystem::AddComponent(Component* component)
+{
+	inputs.push_back((InputComponent*)component);
+
+}
+
+void InputSystem::PurgeEntity(Entity* e)
+{
+	for (int i = 0; i < inputs.size(); i++)
+	{
+		if (inputs[i]->entity == e)
+		{
+			InputComponent* s = inputs[i];
+			inputs.erase(std::remove(inputs.begin(), inputs.end(), s), inputs.end());
 			delete s;
 		}
 	}
