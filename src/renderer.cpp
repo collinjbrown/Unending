@@ -200,6 +200,48 @@ void Renderer::PrepareQuad(glm::vec2 size, glm::vec3 position, glm::vec3 rotatio
 
 }
 
+void Renderer::PrepareQuad(glm::vec2 size, glm::vec3 position, glm::vec3 rotation, glm::vec4 color, int animationID, int cellX, int cellY, int cols, int rows, bool flippedX, bool flippedY)
+{
+	Bundle bundle = DetermineBatch(animationID);
+	Batch& batch = batches[bundle.batch];
+	Quad& quad = batch.buffer[batch.index];
+	batch.index++;
+
+	glm::vec3 topRight		= Util::RotateRelative(	position,	position + glm::vec3(	size.x / 2.0f,	size.y / 2.0f,	0.0f),	rotation) * Game::main.zoom;
+	glm::vec3 bottomRight	= Util::RotateRelative(	position,	position + glm::vec3(	size.x / 2.0f,	-size.y / 2.0f, 0.0f),	rotation) * Game::main.zoom;
+	glm::vec3 bottomLeft	= Util::RotateRelative(	position,	position + glm::vec3(	-size.x / 2.0f,	-size.y / 2.0f,	0.0f),	rotation) * Game::main.zoom;
+	glm::vec3 topLeft		= Util::RotateRelative(	position,	position + glm::vec3(	-size.x / 2.0f,	size.y / 2.0f, 0.0f),	rotation) * Game::main.zoom;
+
+	float cellXMod = 1.0f / cols;
+	float cellYMod = 1.0f / rows;
+
+	float uvX0 = cellX * cellXMod;
+	float uvY0 = cellY * cellYMod;
+	float uvX1 = uvX0 + cellXMod;
+	float uvY1 = uvY0 + cellYMod;
+
+	if (flippedX)
+	{
+		float tempX0 = uvX0;
+
+		uvX0 = uvX1;
+		uvX1 = tempX0;
+	}
+
+	if (flippedY)
+	{
+		float tempY0 = uvY0;
+
+		uvY0 = uvY1;
+		uvY1 = tempY0;
+	}
+
+	quad.topRight		= {	topRight.x,			topRight.y,			topRight.z,		color.r,	color.g,	color.b,	color.a,	uvX0,	uvY0,	bundle.location };
+	quad.bottomRight	= { bottomRight.x,		bottomRight.y,		bottomRight.z,	color.r,	color.g,	color.b,	color.a,	uvX0,	uvY1,	bundle.location };
+	quad.bottomLeft		= { bottomLeft.x,		bottomLeft.y,		bottomLeft.z,	color.r,	color.g,	color.b,	color.a,	uvX1,	uvY1,	bundle.location };
+	quad.topLeft		= { topLeft.x,			topLeft.y,			topLeft.z,		color.r,	color.g,	color.b,	color.a,	uvX1,	uvY0,	bundle.location };
+}
+
 void Renderer::Display()
 {
 	shader.Use();

@@ -11,9 +11,11 @@
 #include <glm/ext/matrix_transform.hpp>
 
 #include "game.h"
+#include "ecs.h"
 #include "util.h"
 
 Game Game::main;
+ECS ECS::main;
 
 static int windowMoved = 0;
 void WindowPosCallback(GLFWwindow* window, int xpos, int ypos)
@@ -69,6 +71,8 @@ int main(void)
 	
 	srand(time(NULL));
 
+	ECS::main.Init();
+
 	Game::main.UpdateProjection();
 
 	Texture* whiteTexture = Texture::whiteTexture();
@@ -79,6 +83,14 @@ int main(void)
 	Texture test{ "assets/sprites/test2.png", true, GL_NEAREST };
 	renderer.textureIDs.push_back(test.ID);
 	Game::main.textureMap.emplace("test", &test);
+
+	Texture block{ "assets/sprites/block.png", true, GL_NEAREST };
+	renderer.textureIDs.push_back(block.ID);
+	Game::main.textureMap.emplace("block", &block);
+
+	Animation testIdle{ "assets/animations/test/test_idle.png", true, 2, 2, 0.5f, { 2, 2 }, true, GL_NEAREST };
+	renderer.textureIDs.push_back(testIdle.ID);
+	Game::main.animationMap.emplace("testIdle", &testIdle);
 
 	// \General Setup
 
@@ -237,14 +249,8 @@ int main(void)
 
 		if (focus && !windowMoved)
 		{
-			for (int x = 0; x < 5; x++)
-			{
-				for (int z = 0; z < 5; z++)
-				{
-					renderer.PrepareCube(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(10.0f * x, 0.0f, -10.f * z), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), test.ID);
-				}
-			}
-			// renderer.PrepareCube(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, -10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), test.ID);
+			float dT = deltaTime * Game::main.dTime;
+			ECS::main.Update(dT);
 		}
 
 		Game::main.renderer->Display();

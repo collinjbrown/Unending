@@ -20,12 +20,13 @@ public:
 
 	Renderer* renderer;
 	std::map<std::string, Texture*> textureMap;
+	std::map<std::string, Animation*> animationMap;
 
 	int windowWidth = 1280;
 	int windowHeight = 720;
 
 	glm::vec2 mousePosition = glm::vec2(0.0f, 0.0f);
-	glm::vec3 cameraPosition = glm::vec3(900.0f, 500.0f, 200.0f);
+	glm::vec3 cameraPosition = glm::vec3(900.0f, 500.0f, 300.0f);
 	glm::vec3 cameraRotation = glm::vec3(44.5f, -45.0f, 0.0f);
 
 	float orthographicSpeedModifier = 100.0f;
@@ -34,6 +35,8 @@ public:
 	float cameraSpeed = 80.0f;
 	float rotationSpeed = 20.0f;
 	float zoomSpeed = 10.0f;
+
+	float dTime = 1.0f;
 
 	glm::mat4 view;
 	glm::mat4 projection;
