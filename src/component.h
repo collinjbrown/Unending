@@ -103,6 +103,7 @@ public:
 
 	float speed;
 	bool track;
+	bool resetting;
 
 	bool lockX;
 	bool lockY;

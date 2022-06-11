@@ -75,6 +75,7 @@ public:
 	int zoomOutKey = GLFW_KEY_KP_SUBTRACT;
 
 	int freeCamKey = GLFW_KEY_LEFT_CONTROL;
+	int resetRotationKey = GLFW_KEY_R;
 };
 
 #endif

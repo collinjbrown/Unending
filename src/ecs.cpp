@@ -8,6 +8,7 @@
 #include "component.h"
 #include "entity.h"
 #include "util.h"
+#include <glm/gtx/norm.hpp>
 
 #pragma region Entities
 
@@ -281,6 +282,8 @@ CameraFollowComponent::CameraFollowComponent(Entity* entity, bool active, glm::v
 	this->offset = offset;
 	this->distance = distance;
 
+	this->resetting = false;
+
 	this->speed = speed;
 	this->track = track;
 
@@ -512,6 +515,7 @@ void InputSystem::Update(int activeScene, float deltaTime)
 			bool zoomIn = ((glfwGetKey(Game::main.window, Game::main.zoomInKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.zoomInKey) == GLFW_PRESS));
 			bool zoomOut = ((glfwGetKey(Game::main.window, Game::main.zoomOutKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.zoomOutKey) == GLFW_PRESS));
 
+			bool resetRotation = ((glfwGetKey(Game::main.window, Game::main.resetRotationKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.resetRotationKey) == GLFW_PRESS));
 
 			if (rotX)
 			{
@@ -549,9 +553,22 @@ void InputSystem::Update(int activeScene, float deltaTime)
 				Game::main.zoom -= Game::main.zoomSpeed * deltaTime;
 			}
 
+			if (resetRotation || camFollower->resetting)
+			{
+				camFollower->resetting = true;
+				Game::main.cameraRotation = Util::Lerp(Game::main.cameraRotation, glm::vec3(44.5f, -45.0f, 0.0f), deltaTime * 2.5f);
+				float d = glm::length2(Game::main.cameraRotation - glm::vec3(44.5f, -45.0f, 0.0f));
+
+				if (d <= 0.00001f)
+				{
+					Game::main.cameraRotation = glm::vec3(44.5f, -45.0f, 0.0f);
+					camFollower->resetting = false;
+				}
+			}
+
 			if (freeCam)
 			{
-				// camFollower->track = false;
+				camFollower->track = false;
 
 				bool moveRight = ((glfwGetKey(Game::main.window, Game::main.moveRightKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveRightKey) == GLFW_PRESS));
 				bool moveLeft = ((glfwGetKey(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS));
