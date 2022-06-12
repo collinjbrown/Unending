@@ -17,6 +17,7 @@ static int inputComponentID					= 5;
 static int cameraFollowComponentID			= 6;
 static int billboardingComponentID			= 7;
 static int actorComponentID					= 8;
+static int movementComponentID				= 9;
 
 static int playerAnimControllerSubID		= 1;
 
@@ -135,12 +136,31 @@ public:
 	Entity* cube;
 
 	float speed;
-	bool moving;
-	glm::vec3 target;
 
 	glm::vec3 baseRotation;
 
 	ActorComponent(Entity* entity, bool active, float speed, Face face, Entity* cube);
+};
+
+enum class MovementType { linear, curve };
+class MovementComponent : public Component
+{
+public:
+	bool moving;
+	MovementType movementType;
+	
+	float speed;
+	glm::vec3 target;
+
+	glm::vec3 upBase;
+	glm::vec3 forwardBase;
+	glm::vec3 rightBase;
+
+	glm::vec3 pivot;
+
+	void RegisterMovement(float speed, glm::vec3 target, glm::vec3 upBase, glm::vec3 forwardBase, glm::vec3 rightBase, glm::vec3 pivot);
+	void RegisterMovement(float speed, glm::vec3 target);
+	MovementComponent(Entity* entity, bool active);
 };
 
 #endif

@@ -61,6 +61,10 @@ public:
 	void RegisterComponent(Component* component, Entity* entity);
 
 	Entity* GetCube(int x, int y, int z);
+	void MoveCube(CubeComponent* cube, int x, int y, int z);
+	void PositionCube(CubeComponent* cube, int x, int y, int z);
+
+	Face GetAbsoluteFace(Face relativeUp, Face pseudoForward);
 	glm::vec3 GetRelativeUp(Face face);
 
 	void MoveActor(ActorComponent* actor, int dX, int dY, int dZ);
@@ -71,6 +75,8 @@ public:
 	void RollCube(ActorComponent* actor, Face rollDirection);
 	void RollCube(CubeComponent* cube, Face rollDirection);
 	glm::vec3 GetLandingCoords(Face activeFace, Face rollDirection);
+
+	void RollActor(ActorComponent* actor, Face rollDirection);
 };
 
 #endif
