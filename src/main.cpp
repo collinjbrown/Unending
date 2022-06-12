@@ -150,9 +150,9 @@ int main(void)
 			glfwSetWindowShouldClose(window, true);
 		}
 		
-		Game::main.cameraRotation.x = fmod(Game::main.cameraRotation.x, 6.3f);
-		Game::main.cameraRotation.y = fmod(Game::main.cameraRotation.y, 6.3f);
-		Game::main.cameraRotation.z = fmod(Game::main.cameraRotation.z, 6.3f);
+		Game::main.cameraRotation.x = fmod(Game::main.cameraRotation.x, 6.2832f);
+		Game::main.cameraRotation.y = fmod(Game::main.cameraRotation.y, 6.2832f);
+		Game::main.cameraRotation.z = fmod(Game::main.cameraRotation.z, 6.2832f);
 
 		// Game::main.cameraRotation = glm::vec3(fmod(Game::main.cameraRotation.x, 6.0f), fmod(Game::main.cameraRotation.y, 6.0f), fmod(Game::main.cameraRotation.z, 6.0f));
 

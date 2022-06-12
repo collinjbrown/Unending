@@ -31,11 +31,14 @@ class ECS
 {
 private:
 	uint32_t entityIDCounter = 0;
+	uint32_t otherIDCounter = 0;
 	int round = 0;
 
 public:
 	static ECS main;
 	int activeScene = 0;
+
+	static const int cubeSize = 10;
 
 	static const int maxWidth = 50;
 	static const int maxHeight = 50;
@@ -50,6 +53,7 @@ public:
 	std::vector<ComponentBlock*> componentBlocks;
 
 	uint32_t GetID();
+	uint32_t GetOtherID();
 	void Init();
 	void Update(float deltaTime);
 
@@ -60,12 +64,12 @@ public:
 
 	void RegisterComponent(Component* component, Entity* entity);
 
+	glm::vec3 CubeToWorldSpace(int x, int y, int z);
+
 	Entity* GetCube(int x, int y, int z);
 	void MoveCube(CubeComponent* cube, int x, int y, int z);
 	void PositionCube(CubeComponent* cube, int x, int y, int z);
-
-	Face GetAbsoluteFace(Face relativeUp, Face pseudoForward);
-	glm::vec3 GetRelativeUp(Face face);
+	void PositionActor(ActorComponent* actor);
 
 	void MoveActor(ActorComponent* actor, int dX, int dY, int dZ);
 
@@ -74,7 +78,6 @@ public:
 
 	void RollCube(ActorComponent* actor, Face rollDirection);
 	void RollCube(CubeComponent* cube, Face rollDirection);
-	glm::vec3 GetLandingCoords(Face activeFace, Face rollDirection);
 
 	void RollActor(ActorComponent* actor, Face rollDirection);
 };

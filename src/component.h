@@ -35,6 +35,7 @@ public:
 	glm::vec3 position;
 	glm::vec3 rotation;
 
+	void SetRotation(glm::vec3 rotation);
 	PositionComponent(Entity* entity, bool active, glm::vec3 position, glm::vec3 rotation);
 };
 
@@ -56,6 +57,7 @@ public:
 class AnimationComponent : public Component
 {
 public:
+	glm::vec3 baseOffset;
 	glm::vec3 offset;
 
 	int activeX;
@@ -78,7 +80,7 @@ public:
 
 	void AddAnimation(std::string s, Animation* anim);
 
-	AnimationComponent(Entity* entity, bool active, glm::vec3 offset, Animation* idleAnimation, std::string animationName, float scaleX, float scaleY, bool flippedX, bool flippedY, glm::vec4 color);
+	AnimationComponent(Entity* entity, bool active, glm::vec3 baseOffset, Animation* idleAnimation, std::string animationName, float scaleX, float scaleY, bool flippedX, bool flippedY, glm::vec4 color);
 };
 
 class AnimationControllerComponent : public Component
@@ -139,27 +141,39 @@ public:
 
 	glm::vec3 baseRotation;
 
+	void SetRotation(glm::vec3 rotation);
 	ActorComponent(Entity* entity, bool active, float speed, Face face, Entity* cube);
 };
 
-enum class MovementType { linear, curve };
+enum class MovementType { linear, curve, rotation };
+
+struct Movement
+{
+	int ID;
+
+	MovementType movementType;
+	float speed;
+	glm::vec3 target;
+
+	float radius;
+
+	glm::vec3 pivot;
+
+	bool operator==(const Movement& rhs) const noexcept
+	{
+		return (this->ID == rhs.ID);
+	}
+};
+
 class MovementComponent : public Component
 {
 public:
 	bool moving;
-	MovementType movementType;
-	
-	float speed;
-	glm::vec3 target;
+	std::vector<Movement> queue;
 
-	glm::vec3 upBase;
-	glm::vec3 forwardBase;
-	glm::vec3 rightBase;
-
-	glm::vec3 pivot;
-
-	void RegisterMovement(float speed, glm::vec3 target, glm::vec3 upBase, glm::vec3 forwardBase, glm::vec3 rightBase, glm::vec3 pivot);
+	void RegisterMovement(float speed, glm::vec3 target, float radius, glm::vec3 pivot);
 	void RegisterMovement(float speed, glm::vec3 target);
+	void RegisterRotation(float speed, glm::vec3 target);
 	MovementComponent(Entity* entity, bool active);
 };
 
