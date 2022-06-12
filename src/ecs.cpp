@@ -125,15 +125,8 @@ void ECS::FloodFill(std::vector<CubeComponent*> &inside, CubeComponent* cube)
 			{
 				for (int z = -1; z <= 1; z++)
 				{
-					if ((x != 0 || y != 0 || z != 0) &&		// Ensures that we're not looking at the active cube.
-						(x != 1 || y != 1 || z != 1) &&		// Ensures that we're not looking at the top right far corner.
-						(x != 1 || y != 1 || z != -1) &&	// Ensures that we're not looking at the top right near corner.
-						(x != 1 || y != -1 || z != 1) &&	// Ensures that we're not looking at the bottom right far corner.
-						(x != 1 || y != -1 || z != -1) &&	// Ensures that we're not looking at the bottom right near corner.
-						(x != -1 || y != 1 || z != 1) &&	// Ensures that we're not looking at the top left far corner.
-						(x != -1 || y != 1 || z != -1) &&	// Ensures that we're not looking at the top left near corner.
-						(x != -1 || y != -1 || z != 1) &&	// Ensures that we're not looking at the bottom left far corner.
-						(x != -1 || y != -1 || z != -1))	// Ensures that we're not looking at the bottom left near corner.
+					if ((x != 0 || y != 0 || z != 0) &&
+						(abs(x) + abs(y) + abs(z) == 1))
 					{
 						// There has to be a better way to do that. Like, almost certainly.
 
