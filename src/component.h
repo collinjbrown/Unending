@@ -29,14 +29,32 @@ public:
 	int ID;
 };
 
+struct Quaternion
+{
+	float w;
+	float x;
+	float y;
+	float z;
+
+	Quaternion operator*(const Quaternion& rhs) const noexcept
+	{
+		Quaternion q = { 0, 0, 0, 0 };
+		q.w = (this->w * rhs.w - this->x * rhs.x - this->y * rhs.y - this->z * rhs.z);
+		q.x = (this->w * rhs.x + this->x * rhs.w + this->y * rhs.z - this->z * rhs.y);
+		q.y = (this->w * rhs.y - this->x * rhs.z + this->y * rhs.w + this->z * rhs.x);
+		q.z = (this->w * rhs.z + this->x * rhs.y - this->y * rhs.x + this->z * rhs.w);
+		return q;
+	}
+};
+
 class PositionComponent : public Component
 {
 public:
 	glm::vec3 position;
-	glm::vec3 rotation;
+	Quaternion quaternion;
 
-	void SetRotation(glm::vec3 rotation);
-	PositionComponent(Entity* entity, bool active, glm::vec3 position, glm::vec3 rotation);
+	void SetRotation(Quaternion rotation);
+	PositionComponent(Entity* entity, bool active, glm::vec3 position, Quaternion quaternion);
 };
 
 class CubeComponent : public Component
@@ -139,7 +157,7 @@ public:
 
 	float speed;
 
-	glm::vec3 baseRotation;
+	Quaternion baseQuaternion;
 
 	void SetRotation(glm::vec3 rotation);
 	ActorComponent(Entity* entity, bool active, float speed, Face face, Entity* cube);
@@ -153,11 +171,14 @@ struct Movement
 
 	MovementType movementType;
 	float speed;
+
 	glm::vec3 target;
 
 	float radius;
 
 	glm::vec3 pivot;
+
+	Quaternion targetRotation;
 
 	bool operator==(const Movement& rhs) const noexcept
 	{
@@ -173,7 +194,7 @@ public:
 
 	void RegisterMovement(float speed, glm::vec3 target, float radius, glm::vec3 pivot);
 	void RegisterMovement(float speed, glm::vec3 target);
-	void RegisterRotation(float speed, glm::vec3 target);
+	void RegisterMovement(float speed, Quaternion target);
 	MovementComponent(Entity* entity, bool active);
 };
 

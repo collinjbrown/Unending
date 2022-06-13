@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 
+#include "component.h"
 #include "shader.h"
 #include "texture.h"
 #include "animation.h"
@@ -66,11 +67,11 @@ public:
 
 	Renderer(GLuint whiteTexture);
 
-	void PrepareCube(glm::vec3 size, glm::vec3 position, glm::vec3 rotation, glm::vec4 color, int textureID);
+	void PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID);
 
 	void PrepareQuad(Quad& input, int textureID);
-	void PrepareQuad(glm::vec2 size, glm::vec3 position, glm::vec3 rotation, glm::vec4 color, int textureID);
-	void PrepareQuad(glm::vec2 size, glm::vec3 position, glm::vec3 rotation, glm::vec4 color, int animationID, int cellX, int cellY, int cols, int rows, bool flippedX, bool flippedY);
+	void PrepareQuad(glm::vec2 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID);
+	void PrepareQuad(glm::vec2 size, glm::vec3 position, Quaternion q, glm::vec4 color, int animationID, int cellX, int cellY, int cols, int rows, bool flippedX, bool flippedY);
 
 	Bundle DetermineBatch(int textureID);
 

@@ -211,14 +211,10 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 
 		if (glm::length2(currentPosition - landingPosition) <= (float)cubeSize * cubeSize)
 		{
-			glm::vec3 newRotation = pos->rotation + Util::GetRollRotation(actor->face, rollDirection, pos->rotation);
-
-			newRotation.x = fmod(newRotation.x, 6.2832f);
-			newRotation.y = fmod(newRotation.y, 6.2832f);
-			newRotation.z = fmod(newRotation.z, 6.2832f);
+			Quaternion newRotation = Util::GetRollRotation(actor->face, rollDirection, pos->quaternion);
 
 			mover->RegisterMovement(10.0f, landingPosition);
-			mover->RegisterRotation(10.0f, newRotation);
+			mover->RegisterMovement(25.0f, newRotation);
 			MoveCube(activeCube, landingCube->x + (int)landingUp.x, landingCube->y + (int)landingUp.y, landingCube->z + (int)landingUp.z);
 
 			// std::cout << "Rotation: " + std::to_string(newRotation.x) + " / " + std::to_string(newRotation.y) + " / " + std::to_string(newRotation.z) << std::endl;
@@ -345,7 +341,7 @@ void ECS::Update(float deltaTime)
 			for (int z = 0; z < mapDepth; z++)
 			{
 				Entity* cube = CreateEntity(0, "Cube: " + std::to_string(x) + " / " + std::to_string(z));
-				ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f)), cube);
+				ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
 				ECS::main.RegisterComponent(new CubeComponent(cube, true, x, 0, z, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
 				ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], x, 0, z);
 				ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
@@ -354,7 +350,7 @@ void ECS::Update(float deltaTime)
 		}
 
 		Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 1) + " / " + std::to_string(1) + " / " + std::to_string(mapDepth - 1));
-		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f)), cube);
+		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
 		ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 1, 1, mapDepth - 1, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
 		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 1, 1, mapDepth - 1);
 		ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
@@ -363,7 +359,7 @@ void ECS::Update(float deltaTime)
 		player = CreateEntity(0, "Player");
 		Animation* testIdle = Game::main.animationMap["testIdle"];
 
-		ECS::main.RegisterComponent(new PositionComponent(player, true, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f)), player);
+		ECS::main.RegisterComponent(new PositionComponent(player, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), player);
 		ECS::main.RegisterComponent(new AnimationComponent(player, true, glm::vec3(0.0f, (testIdle->height / testIdle->rows) * 0.5f * 0.4f, 0.0f), testIdle, "idle", 0.2f, 0.2f, false, false, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)), player);
 		AnimationComponent* a = (AnimationComponent*)player->componentIDMap[animationComponentID];
 		ECS::main.RegisterComponent(new PlayerAnimationControllerComponent(player, true, a), player);
@@ -444,23 +440,21 @@ void ECS::RegisterComponent(Component* component, Entity* entity)
 
 #pragma region Position Component
 
-void PositionComponent::SetRotation(glm::vec3 rotation)
+void PositionComponent::SetRotation(Quaternion rotation)
 {
-	this->rotation = rotation;
-
-	this->rotation.x = fmod(this->rotation.x, 6.2832f);
-	this->rotation.y = fmod(this->rotation.y, 6.2832f);
-	this->rotation.z = fmod(this->rotation.z, 6.2832f);
+	
+	this->quaternion = rotation;
+	Util::NormalizeQuaternion(this->quaternion);
 }
 
-PositionComponent::PositionComponent(Entity* entity, bool active, glm::vec3 position, glm::vec3 rotation)
+PositionComponent::PositionComponent(Entity* entity, bool active, glm::vec3 position, Quaternion quaternion)
 {
 	this->ID = positionComponentID;
 	this->entity = entity;
 	this->active = active;
 
 	this->position = position;
-	this->rotation = rotation;
+	this->quaternion = quaternion;
 }
 
 #pragma endregion
@@ -598,16 +592,17 @@ BillboardingComponent::BillboardingComponent(Entity* entity, bool active)
 
 void ActorComponent::SetRotation(glm::vec3 rotation)
 {
-	this->baseRotation = rotation;
+	rotation.x = fmod(rotation.x, 6.2832f);
+	rotation.y = fmod(rotation.y, 6.2832f);
+	rotation.z = fmod(rotation.z, 6.2832f);
 
-	this->baseRotation.x = fmod(this->baseRotation.x, 6.2832f);
-	this->baseRotation.y = fmod(this->baseRotation.y, 6.2832f);
-	this->baseRotation.z = fmod(this->baseRotation.z, 6.2832f);
+	this->baseQuaternion = Util::EulerToQuaternion(rotation);
+	Util::NormalizeQuaternion(this->baseQuaternion);
 
 	AnimationComponent* anim = (AnimationComponent*)this->entity->componentIDMap[animationComponentID];
 	if (anim != nullptr)
 	{
-		anim->offset = Util::Rotate(anim->baseOffset, this->baseRotation);
+		anim->offset = Util::Rotate(anim->baseOffset, this->baseQuaternion);
 	}
 }
 
@@ -622,13 +617,15 @@ ActorComponent::ActorComponent(Entity * entity, bool active, float speed, Face f
 	this->face = face;
 	this->cube = cube;
 
-	this->baseRotation = glm::vec3(0, 0, 0);
+	this->baseQuaternion = { 1, 0, 0, 0 };
 
-	if (this->face == Face::front)		this->baseRotation = { 3.2f,	0,		0		};
-	if (this->face == Face::back)		this->baseRotation = { -3.2f,	0,		0		};
-	if (this->face == Face::bottom)		this->baseRotation = { 0,		3.2f,	0		};
-	if (this->face == Face::right)		this->baseRotation = { 0,		0,		3.2f	};
-	if (this->face == Face::left)		this->baseRotation = { 0,		0,		-3.2f	};
+	if (this->face == Face::front)		this->baseQuaternion = Util::EulerToQuaternion({ 3.2f,	0,		0		});
+	if (this->face == Face::back)		this->baseQuaternion = Util::EulerToQuaternion({ -3.2f,	0,		0		});
+	if (this->face == Face::bottom)		this->baseQuaternion = Util::EulerToQuaternion({ 0,		3.2f,	0		});
+	if (this->face == Face::right)		this->baseQuaternion = Util::EulerToQuaternion({ 0,		0,		3.2f	});
+	if (this->face == Face::left)		this->baseQuaternion = Util::EulerToQuaternion({ 0,		0,		-3.2f	});
+
+	Util::NormalizeQuaternion(this->baseQuaternion);
 }
 
 #pragma endregion
@@ -660,11 +657,11 @@ void MovementComponent::RegisterMovement(float speed, glm::vec3 target)
 	this->queue.push_back(m);
 }
 
-void MovementComponent::RegisterRotation(float speed, glm::vec3 target)
+void MovementComponent::RegisterMovement(float speed, Quaternion target)
 {
 	this->moving = true;
 	
-	Movement m = { ECS::main.GetOtherID(), MovementType::rotation, speed, target };
+	Movement m = { ECS::main.GetOtherID(), MovementType::rotation, speed, { 0, 0, 0 }, 0.0f, { 0, 0, 0 }, target };
 	this->queue.push_back(m);
 }
 
@@ -685,7 +682,7 @@ void CubeSystem::Update(int activeScene, float deltaTime)
 		{
 			PositionComponent* pos = (PositionComponent*)cube->entity->componentIDMap[positionComponentID];
 
-			Game::main.renderer->PrepareCube(cube->size, pos->position, pos->rotation, cube->color, cube->texture->ID);
+			Game::main.renderer->PrepareCube(cube->size, pos->position, pos->quaternion, cube->color, cube->texture->ID);
 		}
 	}
 }
@@ -756,7 +753,7 @@ void AnimationSystem::Update(int activeScene, float deltaTime)
 
 			PositionComponent* pos = (PositionComponent*)a->entity->componentIDMap[positionComponentID];
 			
-			Game::main.renderer->PrepareQuad(glm::vec2(activeAnimation->width * a->scaleX, activeAnimation->height * a->scaleY), a->offset + pos->position, pos->rotation, a->color, activeAnimation->ID, cellX, cellY, activeAnimation->columns, activeAnimation->rows, a->flippedX, a->flippedY);
+			Game::main.renderer->PrepareQuad(glm::vec2(activeAnimation->width * a->scaleX, activeAnimation->height * a->scaleY), a->offset + pos->position, pos->quaternion, a->color, activeAnimation->ID, cellX, cellY, activeAnimation->columns, activeAnimation->rows, a->flippedX, a->flippedY);
 		}
 	}
 }
@@ -834,7 +831,7 @@ void CameraFollowSystem::Update(int activeScene, float deltaTime)
 			{
 				PositionComponent* pos = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
 
-				glm::vec3 normalizedOffset = glm::normalize(Util::Rotate(c->offset, pos->rotation));
+				glm::vec3 normalizedOffset = glm::normalize(Util::Rotate(c->offset, pos->quaternion));
 
 				Game::main.cameraPosition = Util::Lerp(Game::main.cameraPosition, pos->position + (normalizedOffset * c->distance), deltaTime * c->speed);
 			}
@@ -876,6 +873,7 @@ void InputSystem::Update(int activeScene, float deltaTime)
 			// Player Controlling
 			ActorComponent* actor = (ActorComponent*)input->entity->componentIDMap[actorComponentID];
 			MovementComponent* mover = (MovementComponent*)input->entity->componentIDMap[movementComponentID];
+			MovementComponent* cube = (MovementComponent*)actor->cube->componentIDMap[cubeComponentID];
 
 			bool moveForward = ((glfwGetKey(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS));
 			bool moveBack = ((glfwGetKey(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS));
@@ -883,20 +881,20 @@ void InputSystem::Update(int activeScene, float deltaTime)
 			bool moveLeft = ((glfwGetKey(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS));
 			bool cubeControl = ((glfwGetKey(Game::main.window, Game::main.cubeControlKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.cubeControlKey) == GLFW_PRESS));
 
-			if (!cubeControl && moveForward && !mover->moving)
+			if (!cubeControl && moveForward && !mover->moving && !cube->moving)
 			{
 				ECS::main.MoveActor(actor, 0, 0, 1);
 			}
-			else if (!cubeControl && moveBack && !mover->moving)
+			else if (!cubeControl && moveBack && !mover->moving && !cube->moving)
 			{
 				ECS::main.MoveActor(actor, 0, 0, -1);
 			}
 
-			if (!cubeControl && moveRight && !mover->moving)
+			if (!cubeControl && moveRight && !mover->moving && !cube->moving)
 			{
 				ECS::main.MoveActor(actor, 1, 0, 0);
 			}
-			else if (!cubeControl && moveLeft && !mover->moving)
+			else if (!cubeControl && moveLeft && !mover->moving && !cube->moving)
 			{
 				ECS::main.MoveActor(actor, -1, 0, 0);
 			}
@@ -948,37 +946,53 @@ void InputSystem::Update(int activeScene, float deltaTime)
 
 			bool resetRotation = ((glfwGetKey(Game::main.window, Game::main.resetRotationKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.resetRotationKey) == GLFW_PRESS));
 
+			glm::vec3 camRot = Util::QuaternionToEuler(Game::main.cameraRotation);
+
+			float deltaTheta = Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+
 			if (rotX)
 			{
 				camFollower->resetting = false;
-				Game::main.cameraRotation.x += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+				Quaternion locQ = Util::EulerToQuaternion({ deltaTheta, 0.0f, 0.0f });
+				Util::NormalizeQuaternion(locQ);
+				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
 			}
 			else if (unrotX)
 			{
 				camFollower->resetting = false;
-				Game::main.cameraRotation.x -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+				Quaternion locQ = Util::EulerToQuaternion({ -deltaTheta, 0.0f, 0.0f });
+				Util::NormalizeQuaternion(locQ);
+				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
 			}
 
 			if (rotY)
 			{
 				camFollower->resetting = false;
-				Game::main.cameraRotation.y += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, deltaTheta, 0.0f });
+				Util::NormalizeQuaternion(locQ);
+				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
 			}
 			else if (unrotY)
 			{
 				camFollower->resetting = false;
-				Game::main.cameraRotation.y -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, -deltaTheta, 0.0f });
+				Util::NormalizeQuaternion(locQ);
+				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
 			}
 
 			if (rotZ)
 			{
 				camFollower->resetting = false;
-				Game::main.cameraRotation.z += Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, 0.0f, deltaTheta });
+				Util::NormalizeQuaternion(locQ);
+				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
 			}
 			else if (unrotZ)
 			{
 				camFollower->resetting = false;
-				Game::main.cameraRotation.z -= Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
+				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, 0.0f, -deltaTheta });
+				Util::NormalizeQuaternion(locQ);
+				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
 			}
 
 			if (zoomIn)
@@ -993,12 +1007,15 @@ void InputSystem::Update(int activeScene, float deltaTime)
 			if (resetRotation || camFollower->resetting)
 			{
 				camFollower->resetting = true;
-				Game::main.cameraRotation = Util::Lerp(Game::main.cameraRotation, Game::main.baseCameraRotation + actor->baseRotation, deltaTime * 2.5f);
-				float d = glm::length2(Game::main.cameraRotation - Game::main.baseCameraRotation + actor->baseRotation);
 
-				if (d <= 0.00001f)
+				Quaternion target = Util::EulerToQuaternion(Game::main.baseCameraRotation);
+				Quaternion slerp = Util::Slerp(Game::main.cameraRotation, target, deltaTime * 8.0f);
+
+				Game::main.cameraRotation = slerp;
+
+				if (Util::QuaternionDistance(Game::main.cameraRotation, target) < 0.000001f)
 				{
-					Game::main.cameraRotation = Game::main.baseCameraRotation + actor->baseRotation;
+					Game::main.cameraRotation = target;
 					camFollower->resetting = false;
 				}
 			}
@@ -1088,7 +1105,7 @@ void BillboardingSystem::Update(int activeScene, float deltaTime)
 			board->active && board->entity->GetScene() == 0)
 		{
 			PositionComponent* pos = (PositionComponent*)board->entity->componentIDMap[positionComponentID];
-			pos->rotation = Game::main.cameraRotation;
+			pos->quaternion = Game::main.cameraRotation;
 		}
 	}
 }
@@ -1130,11 +1147,11 @@ void TurnSystem::Update(int activeScene, float deltaTime)
 
 			if (bill != nullptr)
 			{
-				pos->rotation = actor->baseRotation + Game::main.cameraRotation;
+				pos->quaternion = Util::EulerToQuaternion(Util::QuaternionToEuler(actor->baseQuaternion) + Util::QuaternionToEuler(Game::main.cameraRotation));
 			}
 			else
 			{
-				pos->rotation = actor->baseRotation;
+				pos->quaternion = actor->baseQuaternion;
 			}
 		}
 	}
@@ -1213,14 +1230,14 @@ void MovementSystem::Update(int activeScene, float deltaTime)
 				{
 					PositionComponent* pos = (PositionComponent*)move->entity->componentIDMap[positionComponentID];
 
-					glm::vec3 nextStep = Util::Lerp(pos->rotation, m.target, deltaTime * m.speed);
+					Quaternion slerp = Util::Slerp(pos->quaternion, m.targetRotation, deltaTime * m.speed);
 
-					pos->SetRotation(nextStep);
+					pos->SetRotation(slerp);
 
-					float dist = glm::length2(pos->rotation - m.target);
-					if (dist < 0.5f)
+					// std::cout << std::to_string(Util::QuaternionDistance(pos->quaternion, m.targetRotation)) << std::endl;
+					if (Util::QuaternionDistance(pos->quaternion, m.targetRotation) < 0.0025f)
 					{
-						pos->SetRotation(m.target);
+						pos->SetRotation(m.targetRotation);
 						finishedMoves.push_back(m);
 					}
 				}

@@ -103,17 +103,17 @@ Bundle Renderer::DetermineBatch(int textureID)
 	}
 }
 
-void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, glm::vec3 rotation, glm::vec4 color, int textureID)
+void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID)
 {
-	glm::vec3 closeTopRight		= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f),		rotation) * Game::main.zoom;
-	glm::vec3 closeBottomRight	= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f),	rotation) * Game::main.zoom;
-	glm::vec3 closeBottomLeft	= Util::RotateRelative(	position,	position - (size / 2.0f),												rotation) * Game::main.zoom;
-	glm::vec3 closeTopLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f),	rotation) * Game::main.zoom;
+	glm::vec3 closeTopRight		= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f),		q) * Game::main.zoom;
+	glm::vec3 closeBottomRight	= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f),	q) * Game::main.zoom;
+	glm::vec3 closeBottomLeft	= Util::RotateRelative(	position,	position - (size / 2.0f),												q) * Game::main.zoom;
+	glm::vec3 closeTopLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f),	q) * Game::main.zoom;
 
-	glm::vec3 farTopRight		= Util::RotateRelative(	position,	position + (size / 2.0f),												rotation) * Game::main.zoom;
-	glm::vec3 farBottomRight	= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f),		rotation) * Game::main.zoom;
-	glm::vec3 farBottomLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f),	rotation) * Game::main.zoom;
-	glm::vec3 farTopLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, size.y / 2.0f, size.z / 2.0f),		rotation) * Game::main.zoom;
+	glm::vec3 farTopRight		= Util::RotateRelative(	position,	position + (size / 2.0f),												q) * Game::main.zoom;
+	glm::vec3 farBottomRight	= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f),		q) * Game::main.zoom;
+	glm::vec3 farBottomLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f),	q) * Game::main.zoom;
+	glm::vec3 farTopLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, size.y / 2.0f, size.z / 2.0f),		q) * Game::main.zoom;
 
 	// Front	- All the close verts.
 	Quad front
@@ -192,7 +192,7 @@ void Renderer::PrepareQuad(Quad& input, int textureID)
 	batch.index++;
 }
 
-void Renderer::PrepareQuad(glm::vec2 size, glm::vec3 position, glm::vec3 rotation, glm::vec4 color, int textureID)
+void Renderer::PrepareQuad(glm::vec2 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID)
 {
 	/*Batch& batch = DetermineBatch(textureID);
 	Quad& quad = batch.buffer[batch.index];
@@ -200,17 +200,17 @@ void Renderer::PrepareQuad(glm::vec2 size, glm::vec3 position, glm::vec3 rotatio
 
 }
 
-void Renderer::PrepareQuad(glm::vec2 size, glm::vec3 position, glm::vec3 rotation, glm::vec4 color, int animationID, int cellX, int cellY, int cols, int rows, bool flippedX, bool flippedY)
+void Renderer::PrepareQuad(glm::vec2 size, glm::vec3 position, Quaternion q, glm::vec4 color, int animationID, int cellX, int cellY, int cols, int rows, bool flippedX, bool flippedY)
 {
 	Bundle bundle = DetermineBatch(animationID);
 	Batch& batch = batches[bundle.batch];
 	Quad& quad = batch.buffer[batch.index];
 	batch.index++;
 
-	glm::vec3 topRight		= Util::RotateRelative(	position,	position + glm::vec3(	size.x / 2.0f,	size.y / 2.0f,	0.0f),	rotation) * Game::main.zoom;
-	glm::vec3 bottomRight	= Util::RotateRelative(	position,	position + glm::vec3(	size.x / 2.0f,	-size.y / 2.0f, 0.0f),	rotation) * Game::main.zoom;
-	glm::vec3 bottomLeft	= Util::RotateRelative(	position,	position + glm::vec3(	-size.x / 2.0f,	-size.y / 2.0f,	0.0f),	rotation) * Game::main.zoom;
-	glm::vec3 topLeft		= Util::RotateRelative(	position,	position + glm::vec3(	-size.x / 2.0f,	size.y / 2.0f, 0.0f),	rotation) * Game::main.zoom;
+	glm::vec3 topRight		= Util::RotateRelative(	position,	position + glm::vec3(	size.x / 2.0f,	size.y / 2.0f,	0.0f),	q) * Game::main.zoom;
+	glm::vec3 bottomRight	= Util::RotateRelative(	position,	position + glm::vec3(	size.x / 2.0f,	-size.y / 2.0f, 0.0f),	q) * Game::main.zoom;
+	glm::vec3 bottomLeft	= Util::RotateRelative(	position,	position + glm::vec3(	-size.x / 2.0f,	-size.y / 2.0f,	0.0f),	q) * Game::main.zoom;
+	glm::vec3 topLeft		= Util::RotateRelative(	position,	position + glm::vec3(	-size.x / 2.0f,	size.y / 2.0f, 0.0f),	q) * Game::main.zoom;
 
 	float cellXMod = 1.0f / cols;
 	float cellYMod = 1.0f / rows;

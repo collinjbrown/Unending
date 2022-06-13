@@ -134,6 +134,7 @@ int main(void)
 		}
 
 		Game::main.UpdateProjection();
+		glm::vec3 camRot = Util::QuaternionToEuler(Game::main.cameraRotation);
 		glm::vec3 up = Util::Rotate(glm::vec3(0.0f, 1.0f, 0.0f), Game::main.cameraRotation);
 		glm::vec3 center = Game::main.cameraPosition + Util::Rotate(glm::vec3(0.0f, 0.0f, -1.0f), Game::main.cameraRotation);
 		Game::main.view = glm::lookAt(Game::main.cameraPosition, center, up);
@@ -150,9 +151,12 @@ int main(void)
 			glfwSetWindowShouldClose(window, true);
 		}
 		
-		Game::main.cameraRotation.x = fmod(Game::main.cameraRotation.x, 6.2832f);
-		Game::main.cameraRotation.y = fmod(Game::main.cameraRotation.y, 6.2832f);
-		Game::main.cameraRotation.z = fmod(Game::main.cameraRotation.z, 6.2832f);
+		Util::NormalizeQuaternion(Game::main.cameraRotation);
+		/*glm::vec3 cameraRotation = Util::QuaternionToEuler(Game::main.cameraRotation);
+		cameraRotation.x = fmod(Game::main.cameraRotation.x, 6.2832f);
+		cameraRotation.y = fmod(Game::main.cameraRotation.y, 6.2832f);
+		cameraRotation.z = fmod(Game::main.cameraRotation.z, 6.2832f);
+		Game::main.cameraRotation = Util::EulerToQuaternion(cameraRotation);*/
 
 		// Game::main.cameraRotation = glm::vec3(fmod(Game::main.cameraRotation.x, 6.0f), fmod(Game::main.cameraRotation.y, 6.0f), fmod(Game::main.cameraRotation.z, 6.0f));
 
