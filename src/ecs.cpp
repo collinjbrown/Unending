@@ -29,17 +29,16 @@ void ECS::PositionActor(ActorComponent* actor)
 	CubeComponent* cube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
 	
 	pos->position = CubeToWorldSpace(cube->x, cube->y, cube->z) + ((Util::GetRelativeUp(actor->face) * (cubeSize / 2.0f)));
-	actor->SetRotation(Util::GetFaceRotation(actor->face));
-	// std::cout << "Face: " << std::to_string(static_cast<int>(actor->face)) << std::endl;
 }
 
 void ECS::MoveCube(CubeComponent* cube, int x, int y, int z)
 {
+	cubes[cube->x][cube->y][cube->z] = nullptr;
+
 	cube->x = x;
 	cube->y = y;
 	cube->z = z;
 
-	cubes[cube->x][cube->y][cube->z] = nullptr;
 	cubes[x][y][z] = cube->entity;
 }
 
@@ -60,7 +59,6 @@ Entity* ECS::GetCube(int x, int y, int z)
 void ECS::MoveActor(ActorComponent* actor, int dX, int dY, int dZ)
 {
 	CubeComponent* currentCube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
-
 	Entity* target = GetCube(currentCube->x + dX, currentCube->y + dY, currentCube->z + dZ);
 	if (target != nullptr)
 	{
@@ -80,6 +78,73 @@ void ECS::MoveActor(ActorComponent* actor, int dX, int dY, int dZ)
 		}
 	}
 }
+
+std::pair<Face, bool> ECS::FindFulcrum(CubeComponent* activeCube, Face activeFace, Face rollDirection)
+{
+	// This serves to find the cube off which any rotating cube should intuitively push.
+	// This will usually be right below the cube, but this should also account for when
+	// the player is pushing a cube perpendicular to the surface it should land on
+	// rather than parallel to it.
+
+	// First we'll check right below the active cube (relative to the direction being pushed).
+	
+	glm::vec3 expectedDirection = -Util::GetRelativeUp(activeFace);
+	Entity* possibleFulcrum = GetCube(	activeCube->x + expectedDirection.x,
+										activeCube->y + expectedDirection.y,
+										activeCube->z + expectedDirection.z);
+
+	if (possibleFulcrum != nullptr)
+	{
+		return std::pair<Face, bool>(Util::GetFaceFromDifference(expectedDirection), true);
+	}
+
+	// In this case, the fulcrum is not where we expected it to be.
+	// Now, we should check to see if the fulcrum is instead opposite the rolling direction.
+	// This will warrant the same reaction as the above fulcrum.
+
+	expectedDirection = -Util::GetRelativeUp(rollDirection);
+	possibleFulcrum = GetCube(	activeCube->x + expectedDirection.x,
+								activeCube->y + expectedDirection.y,
+								activeCube->z + expectedDirection.z);
+
+	if (possibleFulcrum != nullptr)
+	{
+		return std::pair<Face, bool>(Util::GetFaceFromDifference(expectedDirection), true);
+	}
+
+	// In this case, neither of the allowed fulcrum points can be found.
+	return std::pair<Face, bool>(Util::GetFaceFromDifference(expectedDirection), false);
+}
+
+Face ECS::DetermineRollDirection(Face fulcrum, Face activeFace, Face rollDirection)
+{
+	glm::vec3 fulcrumUp = Util::GetRelativeUp(fulcrum);
+	glm::vec3 activeDown = -Util::GetRelativeUp(activeFace);
+
+	// If the fulcrum is right below the face the actor is standing on.
+	if (fulcrumUp == activeDown)
+	{
+		// Then we want to roll in the direction specified by rollDirection.
+		return rollDirection;
+	}
+
+	// If the fulcrum is below the roll direction, then we want to move opposite the activeFace.
+	if (fulcrumUp == -Util::GetRelativeUp(rollDirection))
+	{
+		return Util::GetFaceFromDifference(activeDown);
+	}
+
+	// These are technically, I believe, the only inputs we expect to receive, but just in case:
+	return rollDirection;
+}
+
+//bool ECS::CheckAutofrendation(CubeComponent* activeCube, Face activeFace, Face rollDirection)
+//{
+//	// True = Autofrendated.
+//	// False = Not autofrendated.
+//
+//	// I'm not actually sure we need this function....
+//}
 
 void ECS::FloodFill(std::vector<CubeComponent*> &inside, CubeComponent* cube)
 {
@@ -172,76 +237,291 @@ std::vector<CubeComponent*> ECS::DetermineStructure(CubeComponent* cube, Face di
 	}
 }
 
+void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirection, Entity* landingTarget, Face landingFace, std::vector<CubeComponent*> affectedCubes)
+{
+	// We need to grab some components first.
+	CubeComponent* activeCube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
+	PositionComponent* pos = (PositionComponent*)actor->cube->componentIDMap[positionComponentID];
+	MovementComponent* mover = (MovementComponent*)actor->cube->componentIDMap[movementComponentID];
+	CubeComponent* landingCube = (CubeComponent*)landingTarget->componentIDMap[cubeComponentID];
+
+	// And just as a precaution.
+	Face activeFace = actor->face;
+	Face roll = rollDirection;
+
+	// This is a secret tool that will help us later.
+	glm::vec3 pivotPos = glm::vec3(activeCube->x, activeCube->y, activeCube->z);
+
+	// Now we need to figure out how the cube is gonna roll.
+	Quaternion newRotation = Util::GetRollRotation(landingFace, roll, pos->quaternion, 1);
+
+	// And then we can figure out where it is going to land in cube and world space.
+	glm::vec3 landingUp = Util::GetRelativeUp(landingFace);
+	glm::vec3 landingCubePosition = glm::vec3(landingCube->x + (int)landingUp.x, landingCube->y + (int)landingUp.y, landingCube->z + (int)landingUp.z);
+	glm::vec3 landingWorldPosition = CubeToWorldSpace(landingCubePosition.x, landingCubePosition.y, landingCubePosition.z);
+
+	// Then, we register the movements to the landing position with the active cube's movement component.
+	// The bezier curve is a little complicated.
+	if (affectedCubes.size() > 1)
+	{
+		glm::vec3 forward = Util::GetRelativeUp(roll);
+		if (forward.z != 0) forward *= -1.0f;
+		glm::vec3 up = Util::GetRelativeUp(landingFace);
+		if (up.z != 0) up *= -1.0f;
+		float dist = glm::length(pos->position - landingWorldPosition);
+		float length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
+		glm::vec3 p1 = pos->position + (forward * length);
+		glm::vec3 p2 = landingWorldPosition + (up * length);
+		mover->RegisterMovement(3.5f, { { pos->position, p1, p2, landingWorldPosition } });
+	}
+	else
+	{
+		glm::vec3 leap = (glm::normalize(landingUp) * 5.0f);
+		if (landingUp.z != 0) leap *= -1.0f;
+		glm::vec3 zenith = ((pos->position + landingWorldPosition) / 2.0f) + leap;
+		mover->RegisterMovement(3.5f, { { pos->position, zenith, landingWorldPosition } });
+	}
+	mover->RegisterMovement(19.0f, newRotation);
+
+	// And finally position the active cube in the right position.
+	MoveCube(activeCube, landingCubePosition.x, landingCubePosition.y, landingCubePosition.z);
+
+	// Oh, and we roll the actor onto the right face.
+	RollActor(actor, standingFace);
+	/*actor->face = standingFace;
+	PositionActor(actor);*/
+	// actor->face = landingFace;
+
+	// But we can't forget that this might involve a larger structure of cubes.
+	// This is where things get a little complicated.
+	for (int j = 1; j < affectedCubes.size(); j++)
+	{
+		// We need to grab the cube and position components, as well as their movement components.
+		CubeComponent* c = affectedCubes[j];
+		PositionComponent* pc = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
+		MovementComponent* mc = (MovementComponent*)c->entity->componentIDMap[movementComponentID];
+
+		// There are two rotations necessary here.
+		// The first is the rotation of the actual position component.
+		Quaternion affRot = Util::GetRollRotation(landingFace, roll, pc->quaternion, 1);
+
+		// And the second is the rotation in space around the initial cube.
+		Quaternion diffRot = Util::GetRollRotation(landingFace, roll, { 1, 0, 0, 0 }, 1);
+
+		// We need to record the initial difference in position between this cube
+		// and the cube we rolled earlier.
+		// We could've waited to finalize the movement of the "active" cube,
+		// but we'll instead make use of that handy pivot point we saved earlier.
+		int dX = pivotPos.x - c->x;
+		int dY = pivotPos.y - c->y;
+		int dZ = pivotPos.z - c->z;
+
+		// Now, we need to figure out what the difference should be after the rotation of the structure.
+		glm::vec3 newDifference = Util::Rotate(glm::vec3(dX, dY, dZ), diffRot);
+
+		// And then we need to convert that to world space, instead of cube space.
+		glm::vec3 worldDifference = CubeToWorldSpace(activeCube->x + (int)newDifference.x, activeCube->y + (int)newDifference.y, activeCube->z + (int)newDifference.z);
+
+		// Finally, we can register the necessary movements with the movement component and actually finalize the movement of the cube in cube space.
+		glm::vec3 forward = Util::GetRelativeUp(roll);
+		if (forward.z != 0) forward *= -1.0f;
+		glm::vec3 up = Util::GetRelativeUp(landingFace);
+		if (up.z != 0) up *= -1.0f;
+		float dist = glm::length(pc->position - worldDifference);
+		float length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
+		glm::vec3 p1 = pc->position + (forward * length);
+		glm::vec3 p2 = worldDifference + (up * length);
+
+		mc->RegisterMovement(3.5f, { { pc->position, p1, p2, worldDifference } });
+		mc->RegisterMovement(19.0f, affRot);
+		MoveCube(c, activeCube->x + (int)newDifference.x, activeCube->y + (int)newDifference.y, activeCube->z + (int)newDifference.z);
+	}
+}
+
+void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Face rollDirection, Entity* landingTarget, Face landingFace, std::vector<CubeComponent*> affectedCubes)
+{
+	// We need to grab some components first.
+	CubeComponent* activeCube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
+	PositionComponent* pos = (PositionComponent*)actor->cube->componentIDMap[positionComponentID];
+	MovementComponent* mover = (MovementComponent*)actor->cube->componentIDMap[movementComponentID];
+	CubeComponent* landingCube = (CubeComponent*)landingTarget->componentIDMap[cubeComponentID];
+
+	// And just as a precaution.
+	Face activeFace = actor->face;
+	Face roll = rollDirection;
+
+	// This is a secret tool that will help us later.
+	glm::vec3 pivotPos = glm::vec3(activeCube->x, activeCube->y, activeCube->z);
+
+	// Now we need to figure out how the cube is gonna roll.
+	// std::cout << "Roll Faces: " + std::to_string((int)standingFace) + " / " + std::to_string((int)roll) << std::endl;
+	Quaternion newRotation = Util::GetRollRotation(oppFulcrum, roll, pos->quaternion, 2);
+
+	// And then we can figure out where it is going to land in cube and world space.
+	glm::vec3 landingUp = Util::GetRelativeUp(landingFace);
+	glm::vec3 landingCubePosition = glm::vec3(landingCube->x + landingUp.x, landingCube->y + landingUp.y, landingCube->z + landingUp.z);
+	glm::vec3 landingWorldPosition = CubeToWorldSpace(landingCubePosition.x, landingCubePosition.y, landingCubePosition.z);
+
+	// Then, we register the movements to the landing position with the active cube's movement component.
+	// The bezier curve is a little complicated.
+	glm::vec3 forward = Util::GetRelativeUp(landingFace);
+	if (forward.z != 0) forward *= -1.0f;
+	glm::vec3 up = Util::GetRelativeUp(oppFulcrum);
+	if (up.z != 0) up *= -1.0f;
+	float dist = glm::length(pos->position - landingWorldPosition);
+	float length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
+	glm::vec3 p1 = pos->position + (forward * length);
+	glm::vec3 p2 = landingWorldPosition + (up * length);
+
+	mover->RegisterMovement(3.5f, { { pos->position, p1, p2, landingWorldPosition } });
+	mover->RegisterMovement(19.0f, newRotation);
+
+	// And finally position the active cube in the right position.
+	MoveCube(activeCube, landingCubePosition.x, landingCubePosition.y, landingCubePosition.z);
+
+	// Oh, and we roll the actor onto the right face.
+	RollActor(actor, standingFace);
+	/*actor->face = standingFace;
+	PositionActor(actor);*/
+	// actor->face = landingFace;
+
+	// But we can't forget that this might involve a larger structure of cubes.
+	// This is where things get a little complicated.
+	for (int j = 1; j < affectedCubes.size(); j++)
+	{
+		// We need to grab the cube and position components, as well as their movement components.
+		CubeComponent* c = affectedCubes[j];
+		PositionComponent* pc = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
+		MovementComponent* mc = (MovementComponent*)c->entity->componentIDMap[movementComponentID];
+
+		// There are two rotations necessary here.
+		// The first is the rotation of the actual position component.
+		Quaternion affRot = Util::GetRollRotation(activeFace, roll, pc->quaternion, 1);
+
+		// And the second is the rotation in space around the initial cube.
+		Quaternion diffRot = Util::GetRollRotation(activeFace, roll, { 1, 0, 0, 0 }, 1);
+
+		// We need to record the initial difference in position between this cube
+		// and the cube we rolled earlier.
+		// We could've waited to finalize the movement of the "active" cube,
+		// but we'll instead make use of that handy pivot point we saved earlier.
+		int dX = c->x - pivotPos.x;
+		int dY = c->y - pivotPos.y;
+		int dZ = c->z - pivotPos.z;
+
+		// Now, we need to figure out what the difference should be after the rotation of the structure.
+		glm::vec3 newDifference = Util::Rotate(glm::vec3(dX, dY, dZ), diffRot);
+
+		// And then we need to convert that to world space, instead of cube space.
+		glm::vec3 worldDifference = CubeToWorldSpace(activeCube->x + (int)newDifference.x, activeCube->y + (int)newDifference.y, activeCube->z + (int)newDifference.z);
+
+		// Finally, we can register the necessary movements with the movement component and actually finalize the movement of the cube in cube space.
+		glm::vec3 forward = Util::GetRelativeUp(landingFace);
+		if (forward.z != 0) forward *= -1.0f;
+		glm::vec3 up = Util::GetRelativeUp(oppFulcrum);
+		if (up.z != 0) up *= -1.0f;
+		float dist = glm::length(pc->position - worldDifference);
+		float length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
+		glm::vec3 p1 = pc->position + (forward * length);
+		glm::vec3 p2 = worldDifference + (up * length);
+
+		mc->RegisterMovement(3.5f, { { pc->position, p1, p2, worldDifference } });
+		mc->RegisterMovement(19.0f, affRot);
+		MoveCube(c, activeCube->x + (int)newDifference.x, activeCube->y + (int)newDifference.y, activeCube->z + (int)newDifference.z);
+	}
+}
+
 void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 {
-	Face landingFace = rollDirection;
 	CubeComponent* activeCube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
 	std::vector<CubeComponent*> affectedCubes = DetermineStructure(activeCube, rollDirection);
 
 	if (affectedCubes.size() > 0)
 	{
 		// There are cubes to roll.
-		// std::cout << "Flood Fill: " + std::to_string(affectedCubes.size()) << std::endl;
 
-		glm::vec3 landingCoords = Util::GetLandingCoords(actor->face, rollDirection);
-		Entity* landingTarget = GetCube(activeCube->x + (int)landingCoords.x, activeCube->y + (int)landingCoords.y, activeCube->z + (int)landingCoords.z);
-		glm::vec3 landingUp = Util::GetRelativeUp(actor->face);
+		// We're (maybe) going to want to check possible landing points from non-initial circumstances, so
+		// we copy them into more variables so that we can change these while preserving the inputs.
+		Face activeFace = actor->face;
+		Face roll = rollDirection;
 
-		if (landingTarget == nullptr)
+		// All rotations expect a fulcrum.
+		std::pair<Face, bool> fulcrum = FindFulcrum(activeCube, activeFace, roll);
+		if (fulcrum.second == false) return;
+
+		// Now that we know we have a fulcrum, we want to figure out the axis upon which the cube is rotating.
+		// This is a function of the position of the fulcrum, the face the player is standing on, and the roll direction.
+		roll = DetermineRollDirection(fulcrum.first, activeFace, roll);
+
+		// We need to make sure that the active cube *can* roll in that direction.
+		// If another cube is blocking it, the whole roll should be stopped.
+		// Let's check that. We don't need any fancy function for this, just:
+		glm::vec3 rollUp = Util::GetRelativeUp(roll);
+		Entity* possibleBlockerEntity = GetCube(activeCube->x + rollUp.x, activeCube->y + rollUp.y, activeCube->z + rollUp.z);
+
+		bool blocked = false;
+
+		if (possibleBlockerEntity != nullptr)
 		{
-			glm::vec3 newRollCoords = -1.0f * Util::GetRelativeUp(Util::GetAbsoluteFace(rollDirection, actor->face));
-			landingTarget = GetCube(activeCube->x + (int)newRollCoords.x, activeCube->y + (int)newRollCoords.y, activeCube->z + (int)newRollCoords.z);
+			CubeComponent* possibleBlocker = (CubeComponent*)possibleBlockerEntity->componentIDMap[cubeComponentID];
 
-			if (landingTarget == nullptr)
+			auto result = std::find(affectedCubes.begin(), affectedCubes.end(), possibleBlocker);
+			int location;
+
+			if (result == affectedCubes.end())
 			{
-				return;
+				blocked = true;
 			}
-
-			landingUp = newRollCoords;
-			std::cout << "Baba Booey!\n";
 		}
 
-		// Add effect on attached cubes later.
-		CubeComponent* landingCube = (CubeComponent*)landingTarget->componentIDMap[cubeComponentID];
-		PositionComponent* pos = (PositionComponent*)activeCube->entity->componentIDMap[positionComponentID];
-		MovementComponent* mover = (MovementComponent*)activeCube->entity->componentIDMap[movementComponentID];
+		if (blocked) return;
 
-		glm::vec3 currentPosition = CubeToWorldSpace(activeCube->x, activeCube->y, activeCube->z);
-		glm::vec3 landingPosition = CubeToWorldSpace(landingCube->x + (int)landingUp.x, landingCube->y + (int)landingUp.y, landingCube->z + (int)landingUp.z);
+		// Now, we have the "real" direction we're going to be rolling.
+		// We want to figure out where we're going to land.
+		// This is a function of the fulcrum and the roll direction.
+		// We always want to roll "towards" the fulcrum.
+		glm::vec3 landingCoords = Util::GetLandingCoords(fulcrum.first, roll) + glm::vec3(activeCube->x, activeCube->y, activeCube->z);
 
-		if (glm::length2(currentPosition - landingPosition) <= (float)cubeSize * cubeSize)
+		// Now we need to see if there is a cube there for us to land on.
+		Entity* landingTarget = GetCube(landingCoords.x, landingCoords.y, landingCoords.z);
+		Face landingFace;
+
+		// If there is a cube there, we can stop now and initiate the actual roll.
+		if (landingTarget != nullptr)
 		{
-			Quaternion newRotation = Util::GetRollRotation(actor->face, rollDirection, pos->quaternion);
+			// The face we're landing on is the opposite of the fulcrum.
+			// At least so long as we're doing only a 90 degree rotation.
+			landingFace = Util::OppositeFace(fulcrum.first);
 
-			mover->RegisterMovement(10.0f, landingPosition);
-			mover->RegisterMovement(25.0f, newRotation);
-			MoveCube(activeCube, landingCube->x + (int)landingUp.x, landingCube->y + (int)landingUp.y, landingCube->z + (int)landingUp.z);
-
-			// std::cout << "Rotation: " + std::to_string(newRotation.x) + " / " + std::to_string(newRotation.y) + " / " + std::to_string(newRotation.z) << std::endl;
-			// RollActor(actor, landingFace);
+			QuarterRoll(actor, rollDirection, roll, landingTarget, landingFace, affectedCubes);
 			return;
 		}
-		else
-		{
 
+		// It is a real shame that our rotation couldn't be that simple.
+		// If we've gotten here, it means there isn't a cube for ours to land on.
+		// That means we need to rotate another 90 degrees.
+		// Luckily, a cube can only rotate 180 degrees, no more, so we only need
+		// to do one more check.
+		
+		// Well, we actually know that if we have gotten this far there is somewhere for
+		// the cube to land: the fulcrum itself. The landing face is just going to be
+		// the rolling direction.
+		landingCoords = glm::vec3(activeCube->x, activeCube->y, activeCube->z) + Util::GetRelativeUp(fulcrum.first);
+		landingTarget = GetCube(landingCoords.x, landingCoords.y, landingCoords.z);
+
+		// Voila, easy as that.
+		// And if there is something for us to land on there, let's do it.
+		if (landingTarget != nullptr)
+		{
+			// We can assume that the landing face is the sane as our roll direction.
+
+			HalfRoll(actor, rollDirection, Util::OppositeFace(fulcrum.first), roll, landingTarget, roll, affectedCubes);
+			return;
 		}
 
-
-		//glm::vec3 landingPosition = CubeToWorldSpace(landingCube->x + (int)landingUp.x, landingCube->y + (int)landingUp.y, landingCube->z + (int)landingUp.z);
-
-		//glm::vec3 pivotPoint = -1.0f * GetRelativeUp(actor->face);
-		//pivotPoint = CubeToWorldSpace(activeCube->x + (int)pivotPoint.x, activeCube->y + (int)pivotPoint.y, activeCube->z + (int)pivotPoint.z);
-		//float pivotDistance = sqrt(glm::length2(CubeToWorldSpace(activeCube->x, activeCube->y, activeCube->z) - pivotPoint));
-
-		//// FIX THIS!
-		//pivotPoint = ((CubeToWorldSpace(activeCube->x, activeCube->y, activeCube->z) + landingPosition) / 2.0f);// +CubeToWorldSpace(pivotPoint.x, pivotPoint.y, pivotPoint.z);
-		//pivotDistance = sqrt(glm::length2(CubeToWorldSpace(activeCube->x, activeCube->y, activeCube->z) - pivotPoint));
-
-
-		//mover->RegisterMovement(10.0f, landingPosition, pivotDistance, pivotPoint);
-
-		//MoveCube(activeCube, landingCube->x + (int)landingUp.x, landingCube->y + (int)landingUp.y, landingCube->z + (int)landingUp.z);
-		//PositionCube(activeCube, activeCube->x, activeCube->y, activeCube->z);
+		// This means we couldn't find a suitable landing position and thus shouldn't roll the cubes at all.
+		// Oh well, better luck next time.
+		return;
 	}
 }
 
@@ -334,27 +614,39 @@ void ECS::Update(float deltaTime)
 	{
 		float cubeSize = (float)this->cubeSize;
 		int mapWidth = 5;
+		int mapHeight = 3;
 		int mapDepth = 5;
 
 		for (int x = 0; x < mapWidth; x++)
 		{
-			for (int z = 0; z < mapDepth; z++)
+			for (int y = 0; y < mapHeight; y++)
 			{
-				Entity* cube = CreateEntity(0, "Cube: " + std::to_string(x) + " / " + std::to_string(z));
-				ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
-				ECS::main.RegisterComponent(new CubeComponent(cube, true, x, 0, z, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
-				ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], x, 0, z);
-				ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-				ECS::main.cubes[x][0][z] = cube;
+				for (int z = 0; z < mapDepth; z++)
+				{
+					Entity* cube = CreateEntity(0, "Cube: " + std::to_string(x) + std::to_string(y) + " / " + std::to_string(z));
+					ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
+					ECS::main.RegisterComponent(new CubeComponent(cube, true, x, y, z, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
+					ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], x, y, z);
+					ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
+					ECS::main.cubes[x][y][z] = cube;
+				}
 			}
 		}
 
-		Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 1) + " / " + std::to_string(1) + " / " + std::to_string(mapDepth - 1));
+		Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 2) + " / " + std::to_string(mapHeight - 1) + " / " + std::to_string(mapDepth));
 		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
-		ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 1, 1, mapDepth - 1, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
-		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 1, 1, mapDepth - 1);
+		ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 2, mapHeight - 1, mapDepth, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
+		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2, mapHeight - 1, mapDepth);
 		ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-		ECS::main.cubes[mapWidth - 1][1][mapDepth - 1] = cube;
+		ECS::main.cubes[mapWidth - 2][mapHeight - 1][mapDepth] = cube;
+
+
+		cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 2) + " / " + std::to_string(mapHeight - 1) + " / " + std::to_string(mapDepth + 1));
+		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
+		ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 2, mapHeight - 1, mapDepth + 1, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
+		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2, mapHeight - 1, mapDepth + 1);
+		ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
+		ECS::main.cubes[mapWidth - 2][mapHeight - 1][mapDepth + 1] = cube;
 
 		player = CreateEntity(0, "Player");
 		Animation* testIdle = Game::main.animationMap["testIdle"];
@@ -364,9 +656,9 @@ void ECS::Update(float deltaTime)
 		AnimationComponent* a = (AnimationComponent*)player->componentIDMap[animationComponentID];
 		ECS::main.RegisterComponent(new PlayerAnimationControllerComponent(player, true, a), player);
 		ECS::main.RegisterComponent(new BillboardingComponent(player, true), player);
-		ECS::main.RegisterComponent(new CameraFollowComponent(player, true, glm::vec3(-295.0f, 615.0f, 1760.0f), 500.0f, 10.0f, true, false, false, false), player);
+		ECS::main.RegisterComponent(new CameraFollowComponent(player, true, glm::vec3(-295.0f, 615.0f, 1760.0f), 750.0f, 10.0f, true, false, false, false), player);
 		ECS::main.RegisterComponent(new InputComponent(player, true, true, 0.5f), player);
-		ECS::main.RegisterComponent(new ActorComponent(player, true, 10.0f, Face::top, ECS::main.cubes[mapWidth - 1][1][mapDepth - 1]), player);
+		ECS::main.RegisterComponent(new ActorComponent(player, true, 10.0f, Face::top, ECS::main.cubes[mapWidth - 2][mapHeight - 1][mapDepth]), player);
 		ECS::main.RegisterComponent(new MovementComponent(player, true), player);
 
 		PositionActor((ActorComponent*)player->componentIDMap[actorComponentID]);
@@ -474,6 +766,8 @@ CubeComponent::CubeComponent(Entity* entity, bool active, int x, int y, int z, g
 	this->size = size;
 	this->color = color;
 	this->texture = texture;
+
+	this->checked = false;
 }
 
 #pragma endregion
@@ -641,11 +935,16 @@ MovementComponent::MovementComponent(Entity* entity, bool active)
 	this->moving = false;
 }
 
-void MovementComponent::RegisterMovement(float speed, glm::vec3 target, float radius, glm::vec3 pivot)
+void MovementComponent::RegisterMovement(float speed, BezierCurve curve)
 {
 	this->moving = true;
 
-	Movement m = { ECS::main.GetOtherID(), MovementType::curve, speed, target, radius, pivot };
+	BezierMovement* m = new BezierMovement();
+	m->ID = ECS::main.GetOtherID();
+	m->movementType = MovementType::bezier;
+	m->speed = speed;
+	m->curve = curve;
+	m->t = 0.0f;
 	this->queue.push_back(m);
 }
 
@@ -653,15 +952,23 @@ void MovementComponent::RegisterMovement(float speed, glm::vec3 target)
 {
 	this->moving = true;
 
-	Movement m = { ECS::main.GetOtherID(), MovementType::linear, speed, target };
+	LinearMovement* m = new LinearMovement();
+	m->ID = ECS::main.GetOtherID();
+	m->movementType = MovementType::linear;
+	m->speed = speed;
+	m->target = target;
 	this->queue.push_back(m);
 }
 
 void MovementComponent::RegisterMovement(float speed, Quaternion target)
 {
 	this->moving = true;
-	
-	Movement m = { ECS::main.GetOtherID(), MovementType::rotation, speed, { 0, 0, 0 }, 0.0f, { 0, 0, 0 }, target };
+
+	RotatingMovement* m = new RotatingMovement();
+	m->ID = ECS::main.GetOtherID();
+	m->movementType = MovementType::rotation;
+	m->speed = speed;
+	m->targetRotation = target;
 	this->queue.push_back(m);
 }
 
@@ -681,7 +988,6 @@ void CubeSystem::Update(int activeScene, float deltaTime)
 			cube->active && cube->entity->GetScene() == 0)
 		{
 			PositionComponent* pos = (PositionComponent*)cube->entity->componentIDMap[positionComponentID];
-
 			Game::main.renderer->PrepareCube(cube->size, pos->position, pos->quaternion, cube->color, cube->texture->ID);
 		}
 	}
@@ -870,10 +1176,20 @@ void InputSystem::Update(int activeScene, float deltaTime)
 		if (input->active && input->entity->GetScene() == activeScene ||
 			input->active && input->entity->GetScene() == 0)
 		{
-			// Player Controlling
 			ActorComponent* actor = (ActorComponent*)input->entity->componentIDMap[actorComponentID];
+
+			// Testing
+			if (glfwGetKey(Game::main.window, GLFW_KEY_0) == GLFW_PRESS) actor->face = Face::front;
+			if (glfwGetKey(Game::main.window, GLFW_KEY_1) == GLFW_PRESS) actor->face = Face::back;
+			if (glfwGetKey(Game::main.window, GLFW_KEY_2) == GLFW_PRESS) actor->face = Face::left;
+			if (glfwGetKey(Game::main.window, GLFW_KEY_3) == GLFW_PRESS) actor->face = Face::right;
+			if (glfwGetKey(Game::main.window, GLFW_KEY_4) == GLFW_PRESS) actor->face = Face::top;
+			if (glfwGetKey(Game::main.window, GLFW_KEY_5) == GLFW_PRESS) actor->face = Face::bottom;
+
+			// Player Controlling
+			// ActorComponent* actor = (ActorComponent*)input->entity->componentIDMap[actorComponentID];
 			MovementComponent* mover = (MovementComponent*)input->entity->componentIDMap[movementComponentID];
-			MovementComponent* cube = (MovementComponent*)actor->cube->componentIDMap[cubeComponentID];
+			MovementComponent* cube = (MovementComponent*)actor->cube->componentIDMap[movementComponentID];
 
 			bool moveForward = ((glfwGetKey(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveForwardKey) == GLFW_PRESS));
 			bool moveBack = ((glfwGetKey(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveBackKey) == GLFW_PRESS));
@@ -881,22 +1197,26 @@ void InputSystem::Update(int activeScene, float deltaTime)
 			bool moveLeft = ((glfwGetKey(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.moveLeftKey) == GLFW_PRESS));
 			bool cubeControl = ((glfwGetKey(Game::main.window, Game::main.cubeControlKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.cubeControlKey) == GLFW_PRESS));
 
+			glm::vec3 movement;
 			if (!cubeControl && moveForward && !mover->moving && !cube->moving)
 			{
-				ECS::main.MoveActor(actor, 0, 0, 1);
+				movement = Util::GetRelativeUp(Util::GetAbsoluteFace(actor->face, Face::back));
+				ECS::main.MoveActor(actor, movement.x, movement.y, movement.z);
 			}
 			else if (!cubeControl && moveBack && !mover->moving && !cube->moving)
 			{
-				ECS::main.MoveActor(actor, 0, 0, -1);
+				movement = Util::GetRelativeUp(Util::GetAbsoluteFace(actor->face, Face::front));
+				ECS::main.MoveActor(actor, movement.x, movement.y, movement.z);
 			}
-
-			if (!cubeControl && moveRight && !mover->moving && !cube->moving)
+			else if (!cubeControl && moveRight && !mover->moving && !cube->moving)
 			{
-				ECS::main.MoveActor(actor, 1, 0, 0);
+				movement = Util::GetRelativeUp(Util::GetAbsoluteFace(actor->face, Face::right));
+				ECS::main.MoveActor(actor, movement.x, movement.y, movement.z);
 			}
 			else if (!cubeControl && moveLeft && !mover->moving && !cube->moving)
 			{
-				ECS::main.MoveActor(actor, -1, 0, 0);
+				movement = Util::GetRelativeUp(Util::GetAbsoluteFace(actor->face, Face::left));
+				ECS::main.MoveActor(actor, movement.x, movement.y, movement.z);
 			}
 
 			// Cube Controlling
@@ -904,12 +1224,12 @@ void InputSystem::Update(int activeScene, float deltaTime)
 			if (cubeControl && moveForward && !mover->moving && input->lastRoll > input->rollDelay)
 			{
 				input->lastRoll = 0.0f;
-				ECS::main.RollCube(actor, Util::GetAbsoluteFace(actor->face, Face::front));
+				ECS::main.RollCube(actor, Util::GetAbsoluteFace(actor->face, Face::back));
 			}
 			else if (cubeControl && moveBack && !mover->moving && input->lastRoll > input->rollDelay)
 			{
 				input->lastRoll = 0.0f;
-				ECS::main.RollCube(actor, Util::GetAbsoluteFace(actor->face, Face::back));
+				ECS::main.RollCube(actor, Util::GetAbsoluteFace(actor->face, Face::front));
 			}
 
 			if (cubeControl && moveRight && !mover->moving && input->lastRoll > input->rollDelay)
@@ -1013,7 +1333,7 @@ void InputSystem::Update(int activeScene, float deltaTime)
 
 				Game::main.cameraRotation = slerp;
 
-				if (Util::QuaternionDistance(Game::main.cameraRotation, target) < 0.000001f)
+				if (Util::QuaternionDistance(Game::main.cameraRotation, target) < 0.000005f)
 				{
 					Game::main.cameraRotation = target;
 					camFollower->resetting = false;
@@ -1188,56 +1508,57 @@ void MovementSystem::Update(int activeScene, float deltaTime)
 		if (move->active && move->entity->GetScene() == activeScene ||
 			move->active && move->entity->GetScene() == 0)
 		{
-			std::vector<Movement> finishedMoves;
+			std::vector<Movement*> finishedMoves;
 
 			for (int j = 0; j < move->queue.size(); j++)
 			{
-				Movement m = move->queue[j];
+				Movement* m = move->queue[j];
 
-				if (m.movementType == MovementType::linear)
+				if (m->movementType == MovementType::linear)
 				{
 					PositionComponent* pos = (PositionComponent*)move->entity->componentIDMap[positionComponentID];
 
-					glm::vec3 nextStep = Util::Lerp(pos->position, m.target, deltaTime * m.speed);
+					LinearMovement* line = (LinearMovement*)m;
+
+					glm::vec3 nextStep = Util::Lerp(pos->position, line->target, deltaTime * line->speed);
 
 					pos->position = nextStep;
 
-					float dist = glm::length2(pos->position - m.target);
+					float dist = glm::length2(pos->position - line->target);
 					if (dist < 0.5f)
 					{
-						pos->position = m.target;
+						pos->position = line->target;
 						finishedMoves.push_back(m);
 					}
 				}
-				else if (m.movementType == MovementType::curve)
+				else if (m->movementType == MovementType::bezier)
 				{
 					PositionComponent* pos = (PositionComponent*)move->entity->componentIDMap[positionComponentID];
 
-					glm::vec3 nextStep = Util::Lerp(pos->position, m.target, deltaTime * m.speed);
+					BezierMovement* curving = (BezierMovement*)m;
 
-					glm::vec3 norm = glm::normalize(nextStep - m.pivot);
+					curving->t += deltaTime * curving->speed;
+					pos->position = curving->curve.GetPoint(curving->t);
 
-					pos->position = (norm * m.radius) + m.pivot;
-
-					float dist = glm::length2(pos->position - m.target);
-					if (dist < 0.5f)
+					if (curving->t >= 1.0f)
 					{
-						pos->position = m.target;
+						pos->position = curving->curve.GetPoint(1.0f);
 						finishedMoves.push_back(m);
 					}
 				}
-				else if (m.movementType == MovementType::rotation)
+				else if (m->movementType == MovementType::rotation)
 				{
 					PositionComponent* pos = (PositionComponent*)move->entity->componentIDMap[positionComponentID];
 
-					Quaternion slerp = Util::Slerp(pos->quaternion, m.targetRotation, deltaTime * m.speed);
+					RotatingMovement* rotation = (RotatingMovement*)m;
+
+					Quaternion slerp = Util::Slerp(pos->quaternion, rotation->targetRotation, deltaTime * rotation->speed);
 
 					pos->SetRotation(slerp);
 
-					// std::cout << std::to_string(Util::QuaternionDistance(pos->quaternion, m.targetRotation)) << std::endl;
-					if (Util::QuaternionDistance(pos->quaternion, m.targetRotation) < 0.0025f)
+					if (Util::QuaternionDistance(pos->quaternion, rotation->targetRotation) < 0.0025f)
 					{
-						pos->SetRotation(m.targetRotation);
+						pos->SetRotation(rotation->targetRotation);
 						finishedMoves.push_back(m);
 					}
 				}

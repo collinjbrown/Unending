@@ -1,9 +1,11 @@
 #ifndef COMPONENT_H
 #define COMPONENT_H
 
+#include <iostream>
 #include <map>
 #include <glm/glm.hpp>
 
+#include "util.h"
 #include "texture.h"
 #include "animation.h"
 
@@ -45,6 +47,38 @@ struct Quaternion
 		q.z = (this->w * rhs.z + this->x * rhs.y - this->y * rhs.x + this->z * rhs.w);
 		return q;
 	}
+
+	bool operator==(const Quaternion& rhs) const noexcept
+	{
+		return ((this->w == rhs.w) && (this->x == rhs.x) && (this->y == rhs.y) && (this->z == rhs.z));
+	}
+};
+
+struct BezierCurve
+{
+	std::vector<glm::vec3> points;
+
+	glm::vec3 GetPoint(float t)
+	{
+		std::vector<glm::vec3> ps = points;
+		std::vector<glm::vec3> tmp;
+
+		for (int i = 0; i < points.size(); i++)
+		{
+			for (int j = 0; j < ps.size() - 1; j++)
+			{
+				tmp.push_back(Util::Lerp(ps[j], ps[j + 1], t));
+			}
+
+			ps = tmp;
+			tmp.clear();
+
+			if (ps.size() == 1)
+			{
+				return ps[0];
+			}
+		}
+	}
 };
 
 class PositionComponent : public Component
@@ -68,6 +102,8 @@ public:
 	glm::vec4 color;
 
 	Texture* texture;
+
+	bool checked;
 
 	CubeComponent(Entity* entity, bool active, int x, int y, int z, glm::vec3 size, glm::vec4 color, Texture* texture);
 };
@@ -153,7 +189,7 @@ class ActorComponent : public Component
 {
 public:
 	Face face;
-	Entity* cube;
+	Entity* cube; 
 
 	float speed;
 
@@ -161,9 +197,9 @@ public:
 
 	void SetRotation(glm::vec3 rotation);
 	ActorComponent(Entity* entity, bool active, float speed, Face face, Entity* cube);
-};
+}; 
 
-enum class MovementType { linear, curve, rotation };
+enum class MovementType { linear, bezier, rotation };
 
 struct Movement
 {
@@ -172,27 +208,40 @@ struct Movement
 	MovementType movementType;
 	float speed;
 
-	glm::vec3 target;
-
-	float radius;
-
-	glm::vec3 pivot;
-
-	Quaternion targetRotation;
-
 	bool operator==(const Movement& rhs) const noexcept
 	{
 		return (this->ID == rhs.ID);
 	}
+
+	bool operator==(const Movement* rhs) const noexcept
+	{
+		return (this->ID == rhs->ID);
+	}
+};
+
+struct LinearMovement : public Movement
+{
+	glm::vec3 target;
+};
+
+struct BezierMovement : public Movement
+{
+	BezierCurve curve;
+	float t = 0.0f;
+};
+
+struct RotatingMovement : public Movement
+{
+	Quaternion targetRotation;
 };
 
 class MovementComponent : public Component
 {
 public:
 	bool moving;
-	std::vector<Movement> queue;
+	std::vector<Movement*> queue;
 
-	void RegisterMovement(float speed, glm::vec3 target, float radius, glm::vec3 pivot);
+	void RegisterMovement(float speed, BezierCurve curve);
 	void RegisterMovement(float speed, glm::vec3 target);
 	void RegisterMovement(float speed, Quaternion target);
 	MovementComponent(Entity* entity, bool active);

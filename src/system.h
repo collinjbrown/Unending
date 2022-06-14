@@ -22,6 +22,37 @@ public:
 	virtual void PurgeEntity(Entity* e) = 0;
 };
 
+struct Chunk
+{
+	int count;
+
+	int cols;	// x
+	int rows;	// y
+	int aisles;	// z
+
+	glm::vec3 size;
+	glm::vec3 position;
+	Quaternion quaternion;
+	glm::vec4 color;
+	int textureID;
+
+	Chunk()
+	{
+		count = 1;
+
+		cols = 1;
+		rows = 1;
+		aisles = 1;
+
+		size = { 0.0f, 0.0f, 0.0f };
+		position = { 0.0f, 0.0f, 0.0f };
+		quaternion = { 1.0f, 0.0f, 0.0f, 0.0f };
+		color = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+		textureID = -1;
+	}
+};
+
 class CubeSystem : public System
 {
 public:

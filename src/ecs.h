@@ -73,8 +73,16 @@ public:
 
 	void MoveActor(ActorComponent* actor, int dX, int dY, int dZ);
 
+	// bool CheckAutofrendation(CubeComponent* activeCube, Face activeFace, Face rollDirection); // Self-Crushing
+
 	void FloodFill(std::vector<CubeComponent*>& inside, CubeComponent* cube);
 	std::vector<CubeComponent*> DetermineStructure(CubeComponent* cube, Face direction);
+
+	std::pair<Face, bool> FindFulcrum(CubeComponent* activeCube, Face activeFace, Face rollDirection);
+	Face DetermineRollDirection(Face fulcrum, Face activeFace, Face rollDirection);
+
+	void QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirection, Entity* landingTarget, Face landingFace, std::vector<CubeComponent*> affectedCubes);
+	void HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Face rollDirection, Entity* landingTarget, Face landingFace, std::vector<CubeComponent*> affectedCubes);
 
 	void RollCube(ActorComponent* actor, Face rollDirection);
 	void RollCube(CubeComponent* cube, Face rollDirection);

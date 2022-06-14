@@ -72,6 +72,7 @@ public:
 	void PrepareQuad(Quad& input, int textureID);
 	void PrepareQuad(glm::vec2 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID);
 	void PrepareQuad(glm::vec2 size, glm::vec3 position, Quaternion q, glm::vec4 color, int animationID, int cellX, int cellY, int cols, int rows, bool flippedX, bool flippedY);
+	void PrepareCube(int rows, int cols, int aisles, glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID);
 
 	Bundle DetermineBatch(int textureID);
 
