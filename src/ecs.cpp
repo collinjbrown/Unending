@@ -235,10 +235,16 @@ std::vector<CubeComponent*> ECS::DetermineStructure(CubeComponent* cube, Face di
 		retCubes.clear();
 		return retCubes;
 	}
+	else
+	{
+		return retCubes;
+	}
 }
 
 void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirection, Entity* landingTarget, Face landingFace, std::vector<CubeComponent*> affectedCubes)
 {
+	// std::cout << "Quarter Roll\n";
+
 	// We need to grab some components first.
 	CubeComponent* activeCube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
 	PositionComponent* pos = (PositionComponent*)actor->cube->componentIDMap[positionComponentID];
@@ -340,6 +346,8 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 
 void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Face rollDirection, Entity* landingTarget, Face landingFace, std::vector<CubeComponent*> affectedCubes)
 {
+	// std::cout << "Half Roll\n";
+
 	// We need to grab some components first.
 	CubeComponent* activeCube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
 	PositionComponent* pos = (PositionComponent*)actor->cube->componentIDMap[positionComponentID];
@@ -396,18 +404,18 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 
 		// There are two rotations necessary here.
 		// The first is the rotation of the actual position component.
-		Quaternion affRot = Util::GetRollRotation(activeFace, roll, pc->quaternion, 1);
+		Quaternion affRot = Util::GetRollRotation(landingFace, roll, pc->quaternion, 1);
 
 		// And the second is the rotation in space around the initial cube.
-		Quaternion diffRot = Util::GetRollRotation(activeFace, roll, { 1, 0, 0, 0 }, 1);
+		Quaternion diffRot = Util::GetRollRotation(landingFace, roll, { 1, 0, 0, 0 }, 1);
 
 		// We need to record the initial difference in position between this cube
 		// and the cube we rolled earlier.
 		// We could've waited to finalize the movement of the "active" cube,
 		// but we'll instead make use of that handy pivot point we saved earlier.
-		int dX = c->x - pivotPos.x;
-		int dY = c->y - pivotPos.y;
-		int dZ = c->z - pivotPos.z;
+		int dX = pivotPos.x - c->x;
+		int dY = pivotPos.y - c->y;
+		int dZ = pivotPos.z - c->z;
 
 		// Now, we need to figure out what the difference should be after the rotation of the structure.
 		glm::vec3 newDifference = Util::Rotate(glm::vec3(dX, dY, dZ), diffRot);
@@ -461,12 +469,11 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 
 		bool blocked = false;
 
-		if (possibleBlockerEntity != nullptr)
+		if (possibleBlockerEntity != nullptr && affectedCubes.size() > 1)
 		{
 			CubeComponent* possibleBlocker = (CubeComponent*)possibleBlockerEntity->componentIDMap[cubeComponentID];
 
 			auto result = std::find(affectedCubes.begin(), affectedCubes.end(), possibleBlocker);
-			int location;
 
 			if (result == affectedCubes.end())
 			{
@@ -612,6 +619,10 @@ void ECS::Update(float deltaTime)
 
 	if (round == 1)
 	{
+		int midMaxX = ECS::main.maxWidth / 2;
+		int midMaxY = ECS::main.maxHeight / 2;
+		int midMaxZ = ECS::main.maxDepth / 2;
+
 		float cubeSize = (float)this->cubeSize;
 		int mapWidth = 5;
 		int mapHeight = 3;
@@ -623,30 +634,25 @@ void ECS::Update(float deltaTime)
 			{
 				for (int z = 0; z < mapDepth; z++)
 				{
-					Entity* cube = CreateEntity(0, "Cube: " + std::to_string(x) + std::to_string(y) + " / " + std::to_string(z));
+					Entity* cube = CreateEntity(0, "Cube: " + std::to_string(x + midMaxX) + std::to_string(y + midMaxY) + " / " + std::to_string(z + midMaxZ));
 					ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
-					ECS::main.RegisterComponent(new CubeComponent(cube, true, x, y, z, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
-					ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], x, y, z);
+					ECS::main.RegisterComponent(new CubeComponent(cube, true, x + midMaxX, y + midMaxY, z + midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
+					ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], x + midMaxX, y + midMaxY, z + midMaxZ);
 					ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-					ECS::main.cubes[x][y][z] = cube;
+					ECS::main.cubes[x + midMaxX][y + midMaxY][z + midMaxZ] = cube;
 				}
 			}
 		}
 
-		Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 2) + " / " + std::to_string(mapHeight - 1) + " / " + std::to_string(mapDepth));
-		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
-		ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 2, mapHeight - 1, mapDepth, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
-		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2, mapHeight - 1, mapDepth);
-		ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-		ECS::main.cubes[mapWidth - 2][mapHeight - 1][mapDepth] = cube;
-
-
-		cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 2) + " / " + std::to_string(mapHeight - 1) + " / " + std::to_string(mapDepth + 1));
-		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
-		ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 2, mapHeight - 1, mapDepth + 1, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
-		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2, mapHeight - 1, mapDepth + 1);
-		ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-		ECS::main.cubes[mapWidth - 2][mapHeight - 1][mapDepth + 1] = cube;
+		for (int i = 0; i < 10; i++)
+		{
+			Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 2 + midMaxX) + " / " + std::to_string(mapHeight - 1 + midMaxY) + " / " + std::to_string(mapDepth + i + midMaxZ));
+			ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
+			ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 2 + midMaxX, mapHeight - 1 + midMaxY, mapDepth + i + midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
+			ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2 + midMaxX, mapHeight - 1 + midMaxY, mapDepth + i + midMaxZ);
+			ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
+			ECS::main.cubes[mapWidth - 2 + midMaxX][mapHeight - 1 + midMaxY][mapDepth + i + midMaxZ] = cube;
+		}
 
 		player = CreateEntity(0, "Player");
 		Animation* testIdle = Game::main.animationMap["testIdle"];
@@ -656,12 +662,15 @@ void ECS::Update(float deltaTime)
 		AnimationComponent* a = (AnimationComponent*)player->componentIDMap[animationComponentID];
 		ECS::main.RegisterComponent(new PlayerAnimationControllerComponent(player, true, a), player);
 		ECS::main.RegisterComponent(new BillboardingComponent(player, true), player);
-		ECS::main.RegisterComponent(new CameraFollowComponent(player, true, glm::vec3(-295.0f, 615.0f, 1760.0f), 750.0f, 10.0f, true, false, false, false), player);
+		ECS::main.RegisterComponent(new CameraFollowComponent(player, true, glm::vec3(-295.0f, 615.0f, 1760.0f), 350.0f, 10.0f, true, false, false, false), player);
 		ECS::main.RegisterComponent(new InputComponent(player, true, true, 0.5f), player);
-		ECS::main.RegisterComponent(new ActorComponent(player, true, 10.0f, Face::top, ECS::main.cubes[mapWidth - 2][mapHeight - 1][mapDepth]), player);
+		ECS::main.RegisterComponent(new ActorComponent(player, true, 10.0f, Face::top, ECS::main.cubes[mapWidth - 2 + midMaxX][mapHeight - 1 + midMaxY][mapDepth + midMaxZ]), player);
 		ECS::main.RegisterComponent(new MovementComponent(player, true), player);
 
 		PositionActor((ActorComponent*)player->componentIDMap[actorComponentID]);
+
+		glm::vec3 possPos = ECS::main.CubeToWorldSpace(mapWidth - 2 + midMaxX, mapHeight - 1 + midMaxY, mapDepth + midMaxZ);
+		std::cout << "Poss: " + std::to_string(possPos.x) + " / " + std::to_string(possPos.y) + " / " + std::to_string(possPos.z) << std::endl;
 	}
 
 	for (int i = 0; i < componentBlocks.size(); i++)
@@ -1135,11 +1144,11 @@ void CameraFollowSystem::Update(int activeScene, float deltaTime)
 			if (c->active && c->entity->GetScene() == activeScene ||
 				c->active && c->entity->GetScene() == 0)
 			{
-				PositionComponent* pos = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
+				/*PositionComponent* pos = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
 
-				glm::vec3 normalizedOffset = glm::normalize(Util::Rotate(c->offset, pos->quaternion));
+				glm::vec3 normalizedOffset = glm::normalize(Util::Rotate(c->offset, Game::main.cameraRotation));
 
-				Game::main.cameraPosition = Util::Lerp(Game::main.cameraPosition, pos->position + (normalizedOffset * c->distance), deltaTime * c->speed);
+				Game::main.cameraPosition = Util::Lerp(Game::main.cameraPosition, pos->position + (normalizedOffset * c->distance), deltaTime * c->speed);*/
 			}
 		}
 	}
