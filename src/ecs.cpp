@@ -159,7 +159,7 @@ Face ECS::DetermineRollDirection(Face fulcrum, Face activeFace, Face rollDirecti
 //	// I'm not actually sure we need this function....
 //}
 
-void ECS::FloodFill(std::vector<CubeComponent*> &inside, CubeComponent* cube)
+void ECS::FloodFill(std::vector<CubeComponent*> &inside, CubeComponent* cube, CubeComponent* activeCube, CubeComponent* fulcrum)
 {
 	auto result = std::find(inside.rbegin(), inside.rend(), cube);
 	int location;
@@ -179,23 +179,29 @@ void ECS::FloodFill(std::vector<CubeComponent*> &inside, CubeComponent* cube)
 	}
 	else
 	{
-		inside.push_back(cube);
+		float distToCube = glm::length2(glm::vec3(activeCube->x, activeCube->y, activeCube->z) - glm::vec3(cube->x, cube->y, cube->z));
+		float distToFulcrum = glm::length2(glm::vec3(fulcrum->x, fulcrum->y, fulcrum->z) - glm::vec3(cube->x, cube->y, cube->z));
 
-		for (int x = -1; x <= 1; x++)
+		if (distToCube < distToFulcrum)
 		{
-			for (int y = -1; y <= 1; y++)
-			{
-				for (int z = -1; z <= 1; z++)
-				{
-					if ((x != 0 || y != 0 || z != 0) &&		// Ensures that you're not looking at the center cube.
-						(abs(x) + abs(y) + abs(z) == 1))	// I believe this is a more elegant way to solve this than my previous method.
-					{
-						Entity* activeCubeEntity = GetCube(cube->x + x, cube->y + y, cube->z + z);
+			inside.push_back(cube);
 
-						if (activeCubeEntity != nullptr)
+			for (int x = -1; x <= 1; x++)
+			{
+				for (int y = -1; y <= 1; y++)
+				{
+					for (int z = -1; z <= 1; z++)
+					{
+						if ((x != 0 || y != 0 || z != 0) &&		// Ensures that you're not looking at the center cube.
+							(abs(x) + abs(y) + abs(z) == 1))	// I believe this is a more elegant way to solve this than my previous method.
 						{
-							CubeComponent* nextCube = (CubeComponent*)activeCubeEntity->componentIDMap[cubeComponentID];
-							FloodFill(inside, nextCube);
+							Entity* activeCubeEntity = GetCube(cube->x + x, cube->y + y, cube->z + z);
+
+							if (activeCubeEntity != nullptr)
+							{
+								CubeComponent* nextCube = (CubeComponent*)activeCubeEntity->componentIDMap[cubeComponentID];
+								FloodFill(inside, nextCube, activeCube, fulcrum);
+							}
 						}
 					}
 				}
@@ -204,7 +210,7 @@ void ECS::FloodFill(std::vector<CubeComponent*> &inside, CubeComponent* cube)
 	}
 }
 
-std::vector<CubeComponent*> ECS::DetermineStructure(CubeComponent* cube, Face direction)
+std::vector<CubeComponent*> ECS::DetermineStructure(CubeComponent* cube, CubeComponent* fulcrum, Face direction)
 {
 	std::vector<CubeComponent*> retCubes;
 	retCubes.push_back(cube);
@@ -220,30 +226,58 @@ std::vector<CubeComponent*> ECS::DetermineStructure(CubeComponent* cube, Face di
 
 	CubeComponent* activeCube = (CubeComponent*)activeCubeEntity->componentIDMap[cubeComponentID];
 
-	FloodFill(retCubes, activeCube);
+	FloodFill(retCubes, activeCube, cube, fulcrum);
 
 	if (retCubes.size() < 4)
 	{
 		return retCubes;
 	}
 
-	int touchingSides = 0;
+	int touchingSidesFulcrum = 0;
+	bool tf = false,
+		tb = false,
+		tr = false,
+		tl = false,
+		tu = false,
+		td = false;
 
 	for (int i = 0; i < retCubes.size(); i++)
 	{
 		CubeComponent* c = retCubes[i];
 		if (c != cube)
 		{
-			int diff = abs((cube->x - c->x) + (cube->y - c->y) + (cube->z - c->z));
+			int diffX = cube->x - c->x;
+			int diffY = cube->y - c->y;
+			int diffZ = cube->z - c->z;
 
-			if (diff < 3)
+			if (diffX == 1 && diffY == 0 && diffZ == 0) tr = true;
+			else if (diffX == -1 && diffY == 0 && diffZ == 0) tl = true;
+			else if (diffX == 0 && diffY == 1 && diffZ == 0) tu = true;
+			else if (diffX == 0 && diffY == -1 && diffZ == 0) td = true;
+			else if (diffX == 0 && diffY == 0 && diffZ == 1) tb = true;
+			else if (diffX == 0 && diffY == 0 && diffZ == -1) tf = true;
+
+			int diff = abs(fulcrum->x - c->x) + abs(fulcrum->y - c->y) + abs(fulcrum->z - c->z);
+
+			if (diff == 1)
 			{
-				touchingSides++;
+				touchingSidesFulcrum++;
 			}
 		}
 	}
 
-	if (touchingSides > 2)
+	if (tf && direction == Face::front ||
+		tb && direction == Face::back ||
+		tr && direction == Face::right ||
+		tl && direction == Face::left ||
+		tu && direction == Face::top ||
+		td && direction == Face::bottom)
+	{
+		retCubes.clear();
+		return retCubes;
+	}
+
+	if (touchingSidesFulcrum > 2)
 	{
 		retCubes.clear();
 		return retCubes;
@@ -291,7 +325,7 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 		int dZ = pivotPos.z - c->z;
 
 		Quaternion diffRot = Util::GetRollRotation(landingFace, roll, { 1, 0, 0, 0 }, 1);
-		glm::vec3 newDifference = Util::Rotate(glm::vec3(dX, dY, dZ), diffRot);
+		glm::vec3 newDifference = Util::Rotate(glm::vec3(-dX, dY, dZ), diffRot);
 
 		// And then we need to convert that to world space, instead of cube space.
 		glm::vec3 worldDifference = CubeToWorldSpace(landingCubePosition.x + (int)newDifference.x, landingCubePosition.y + (int)newDifference.y, landingCubePosition.z + (int)newDifference.z);
@@ -399,8 +433,10 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 		int dY = pivotPos.y - c->y;
 		int dZ = pivotPos.z - c->z;
 
+		// if (dY != 0 && dZ != 0) dX *= -1.0f;
+
 		// Now, we need to figure out what the difference should be after the rotation of the structure.
-		glm::vec3 newDifference = Util::Rotate(glm::vec3(dX, dY, dZ), diffRot);
+		glm::vec3 newDifference = Util::Rotate(glm::vec3(-dX, dY, dZ), diffRot);
 
 		// And then we need to convert that to world space, instead of cube space.
 		glm::vec3 worldDifference = CubeToWorldSpace(activeCube->x + (int)newDifference.x, activeCube->y + (int)newDifference.y, activeCube->z + (int)newDifference.z);
@@ -423,11 +459,11 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 		p1 = pc->position + (forward * length);
 		p2 = finalPoint + (up * length);
 
-		CubeComponent* lastCube = affectedCubes[j - 1];
+		/*CubeComponent* lastCube = affectedCubes[j - 1];
 		if (abs(cubeSpace.x - lastCube->x) + abs(cubeSpace.y - lastCube->y) + abs(cubeSpace.z - lastCube->z) > 1)
 		{
 			cubeSpace = (cubeSpace + glm::vec3(lastCube->x, lastCube->y, lastCube->z)) / 2.0f;
-		}
+		}*/
 		finalPoint = CubeToWorldSpace(cubeSpace.x, cubeSpace.y, cubeSpace.z);
 
 		mc->RegisterMovement(3.5f, { { pc->position, p1, p2, finalPoint } }, 1.0f);
@@ -597,11 +633,11 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 		p1 = pc->position + (forward * length);
 		p2 = finalPoint + (up * length);
 
-		CubeComponent* lastCube = affectedCubes[j - 1];
+		/*CubeComponent* lastCube = affectedCubes[j - 1];
 		if (abs(cubeSpace.x - lastCube->x) + abs(cubeSpace.y - lastCube->y) + abs(cubeSpace.z - lastCube->z) > 1)
 		{
 			cubeSpace = (cubeSpace + glm::vec3(lastCube->x, lastCube->y, lastCube->z)) / 2.0f;
-		}
+		}*/
 		finalPoint = CubeToWorldSpace(cubeSpace.x, cubeSpace.y, cubeSpace.z);
 
 		mc->RegisterMovement(3.5f, { { pc->position, p1, p2, finalPoint } }, 1.0f);
@@ -613,21 +649,25 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 {
 	CubeComponent* activeCube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
-	std::vector<CubeComponent*> affectedCubes = DetermineStructure(activeCube, rollDirection);
+
+	// There are cubes to roll.
+
+	// We're (maybe) going to want to check possible landing points from non-initial circumstances, so
+	// we copy them into more variables so that we can change these while preserving the inputs.
+	Face activeFace = actor->face;
+	Face roll = rollDirection;
+
+	// All rotations expect a fulcrum.
+	std::pair<Face, bool> fulcrum = FindFulcrum(activeCube, activeFace, roll);
+	if (fulcrum.second == false) return;
+
+	glm::vec3 fulcrumPos = Util::GetRelativeUp(fulcrum.first) + glm::vec3(activeCube->x, activeCube->y, activeCube->z);
+	Entity* fulcrumEntity = cubes[(int)fulcrumPos.x][(int)fulcrumPos.y][(int)fulcrumPos.z];
+	CubeComponent* fulcrumCube = (CubeComponent*)fulcrumEntity->componentIDMap[cubeComponentID];
+	std::vector<CubeComponent*> affectedCubes = DetermineStructure(activeCube, fulcrumCube, rollDirection);
 
 	if (affectedCubes.size() > 0)
 	{
-		// There are cubes to roll.
-
-		// We're (maybe) going to want to check possible landing points from non-initial circumstances, so
-		// we copy them into more variables so that we can change these while preserving the inputs.
-		Face activeFace = actor->face;
-		Face roll = rollDirection;
-
-		// All rotations expect a fulcrum.
-		std::pair<Face, bool> fulcrum = FindFulcrum(activeCube, activeFace, roll);
-		if (fulcrum.second == false) return;
-
 		// Now that we know we have a fulcrum, we want to figure out the axis upon which the cube is rotating.
 		// This is a function of the position of the fulcrum, the face the player is standing on, and the roll direction.
 		roll = DetermineRollDirection(fulcrum.first, activeFace, roll);
@@ -680,7 +720,7 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 		// That means we need to rotate another 90 degrees.
 		// Luckily, a cube can only rotate 180 degrees, no more, so we only need
 		// to do one more check.
-		
+
 		// Well, we actually know that if we have gotten this far there is somewhere for
 		// the cube to land: the fulcrum itself. The landing face is just going to be
 		// the rolling direction.
@@ -696,11 +736,12 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 			HalfRoll(actor, rollDirection, Util::OppositeFace(fulcrum.first), roll, landingTarget, roll, affectedCubes);
 			return;
 		}
-
-		// This means we couldn't find a suitable landing position and thus shouldn't roll the cubes at all.
-		// Oh well, better luck next time.
-		return;
 	}
+
+	// This means we couldn't find a suitable landing position and thus shouldn't roll the cubes at all.
+	// Oh well, better luck next time.
+	return;
+
 }
 
 void ECS::RollCube(CubeComponent* cube, Face rollDirection)
@@ -790,14 +831,14 @@ void ECS::Update(float deltaTime)
 
 	if (round == 1)
 	{
-		int midMaxX = ECS::main.maxWidth / 2;
-		int midMaxY = ECS::main.maxHeight / 2;
-		int midMaxZ = ECS::main.maxDepth / 2;
-
 		float cubeSize = (float)this->cubeSize;
 		int mapWidth = 5;
 		int mapHeight = 5;
 		int mapDepth = 5;
+
+		int midMaxX = (ECS::main.maxWidth / 2) - (mapWidth / 2);
+		int midMaxY = (ECS::main.maxHeight / 2) - (mapHeight / 2);
+		int midMaxZ = (ECS::main.maxDepth / 2) - (mapDepth / 2);
 
 		for (int x = 0; x < mapWidth; x++)
 		{
@@ -815,14 +856,24 @@ void ECS::Update(float deltaTime)
 			}
 		}
 
-		for (int i = 1; i < 10; i++)
+		/*Entity* cube = CreateEntity(0, "Cube: " + std::to_string((mapWidth / 2) + midMaxX) + " / " + std::to_string(-1 + midMaxY) + " / " + std::to_string(mapDepth - 1 + midMaxZ));
+		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
+		ECS::main.RegisterComponent(new CubeComponent(cube, true, (mapWidth / 2) + midMaxX, -1 + midMaxY, mapDepth - 1 + midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["block"]), cube);
+		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], (mapWidth / 2) + midMaxX, -1 + midMaxY, mapDepth - 1 + midMaxZ);
+		ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
+		ECS::main.cubes[(mapWidth / 2) + +midMaxX][-1 + midMaxY][mapDepth - 1 + midMaxZ] = cube;*/
+
+		for (int x = 0; x < mapWidth; x++)
 		{
-			Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 2 + midMaxX) + " / " + std::to_string(-i + midMaxY) + " / " + std::to_string(mapDepth - 1 + midMaxZ));
-			ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
-			ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 2 + midMaxX, -i + midMaxY, mapDepth - 1 + midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
-			ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2 + midMaxX, -i + midMaxY, mapDepth - 1 + midMaxZ);
-			ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-			ECS::main.cubes[mapWidth - 2 + midMaxX][-i + midMaxY][mapDepth - 1 + midMaxZ] = cube;
+			for (int i = 1; i < 10; i++)
+			{
+				Entity* cube = CreateEntity(0, "Cube: " + std::to_string(x + midMaxX) + " / " + std::to_string(-i + midMaxY) + " / " + std::to_string(mapDepth - 1 + midMaxZ));
+				ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
+				ECS::main.RegisterComponent(new CubeComponent(cube, true, x + midMaxX, -i + midMaxY, mapDepth - 1 + midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["block"]), cube);
+				ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], x + midMaxX, -i + midMaxY, mapDepth - 1 + midMaxZ);
+				ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
+				ECS::main.cubes[x + + midMaxX][-i + midMaxY][mapDepth - 1 + midMaxZ] = cube;
+			}
 		}
 
 		/*for (int i = 1; i < 10; i++)
@@ -833,14 +884,14 @@ void ECS::Update(float deltaTime)
 			ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2 + midMaxX, -i + midMaxY, midMaxZ + 1);
 			ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
 			ECS::main.cubes[mapWidth - 2 + midMaxX][-i + midMaxY][midMaxZ + 1] = cube;
-		}*/
+		}
 
-		Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 1 + midMaxX) + " / " + std::to_string(mapHeight + midMaxY) + " / " + std::to_string(mapDepth - 1 + midMaxZ));
+		Entity* cube = CreateEntity(0, "Cube: " + std::to_string(midMaxX) + " / " + std::to_string(midMaxY + 1) + " / " + std::to_string(midMaxZ));
 		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
-		ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 1 + midMaxX, mapHeight + midMaxY, mapDepth - 1 + midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
-		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 1 + midMaxX, mapHeight + midMaxY, mapDepth - 1 + midMaxZ);
+		ECS::main.RegisterComponent(new CubeComponent(cube, true, midMaxX, midMaxY + 1, midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
+		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], midMaxX, midMaxY + 1, midMaxZ);
 		ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-		ECS::main.cubes[mapWidth - 1 + midMaxX][mapHeight + midMaxY][mapDepth - 1 + midMaxZ] = cube;
+		ECS::main.cubes[midMaxX][midMaxY + 1][midMaxZ] = cube;*/
 
 		player = CreateEntity(0, "Player");
 		Animation* testIdle = Game::main.animationMap["testIdle"];
@@ -852,12 +903,12 @@ void ECS::Update(float deltaTime)
 		ECS::main.RegisterComponent(new BillboardingComponent(player, true), player);
 		ECS::main.RegisterComponent(new CameraFollowComponent(player, true, { -1.0f, 0.0f, 0.0f, 0.0f }, 500.0f, 40.0f, true, false, false, false), player);
 		ECS::main.RegisterComponent(new InputComponent(player, true, true, 0.5f), player);
-		ECS::main.RegisterComponent(new ActorComponent(player, true, 10.0f, Face::back, ECS::main.cubes[mapWidth - 2 + midMaxX][midMaxY - 1][mapDepth - 1 + midMaxZ]), player);
+		ECS::main.RegisterComponent(new ActorComponent(player, true, 10.0f, Face::back, ECS::main.cubes[(mapWidth / 2) + midMaxX][midMaxY - 1][mapDepth - 1 + midMaxZ]), player);
 		ECS::main.RegisterComponent(new MovementComponent(player, true), player);
 
 		PositionActor((ActorComponent*)player->componentIDMap[actorComponentID]);
 
-		glm::vec3 possPos = ECS::main.CubeToWorldSpace(mapWidth - 2 + midMaxX, mapHeight - 1 + midMaxY, mapDepth + midMaxZ);
+		glm::vec3 possPos = ECS::main.CubeToWorldSpace((mapWidth / 2) + midMaxX, midMaxY - 1, mapDepth - 1 + midMaxZ);
 
 		Game::main.cameraPosition += possPos;
 	}
@@ -1082,22 +1133,6 @@ BillboardingComponent::BillboardingComponent(Entity* entity, bool active)
 
 #pragma region Actor Component
 
-void ActorComponent::SetRotation(glm::vec3 rotation)
-{
-	rotation.x = fmod(rotation.x, 6.2832f);
-	rotation.y = fmod(rotation.y, 6.2832f);
-	rotation.z = fmod(rotation.z, 6.2832f);
-
-	this->baseQuaternion = Util::EulerToQuaternion(rotation);
-	Util::NormalizeQuaternion(this->baseQuaternion);
-
-	AnimationComponent* anim = (AnimationComponent*)this->entity->componentIDMap[animationComponentID];
-	if (anim != nullptr)
-	{
-		anim->offset = Util::Rotate(anim->baseOffset, this->baseQuaternion);
-	}
-}
-
 ActorComponent::ActorComponent(Entity * entity, bool active, float speed, Face face, Entity * cube)
 {
 	this->ID = actorComponentID;
@@ -1201,23 +1236,47 @@ void CubeSystem::Update(int activeScene, float deltaTime)
 		{
 			PositionComponent* pos = (PositionComponent*)cube->entity->componentIDMap[positionComponentID];
 
-			Entity* up = ECS::main.cubes[cube->x + 0][cube->y + 1][cube->z + 0];
-			if (up != nullptr) { MovementComponent* m = (MovementComponent*)up->componentIDMap[movementComponentID]; if (m->moving) { up = nullptr; } }
+			Entity* up = nullptr;
+			if (cube->y + 1 < ECS::main.maxHeight)
+			{
+				up = ECS::main.cubes[cube->x + 0][cube->y + 1][cube->z + 0];
+				if (up != nullptr) { MovementComponent* m = (MovementComponent*)up->componentIDMap[movementComponentID]; if (m->moving) { up = nullptr; } }
+			}
 
-			Entity* down = ECS::main.cubes[cube->x + 0][cube->y - 1][cube->z + 0];
-			if (down != nullptr) { MovementComponent* m = (MovementComponent*)down->componentIDMap[movementComponentID]; if (m->moving) { down = nullptr; } }
+			Entity* down = nullptr;
+			if (cube->y - 1 > 0)
+			{
+				down = ECS::main.cubes[cube->x + 0][cube->y - 1][cube->z + 0];
+				if (down != nullptr) { MovementComponent* m = (MovementComponent*)down->componentIDMap[movementComponentID]; if (m->moving) { down = nullptr; } }
+			}
 
-			Entity* right = ECS::main.cubes[cube->x + 1][cube->y + 0][cube->z + 0];
-			if (right != nullptr) { MovementComponent* m = (MovementComponent*)right->componentIDMap[movementComponentID]; if (m->moving) { right = nullptr; } }
+			Entity* right = nullptr;
+			if (cube->x + 1 < ECS::main.maxWidth)
+			{
+				right = ECS::main.cubes[cube->x + 1][cube->y + 0][cube->z + 0];
+				if (right != nullptr) { MovementComponent* m = (MovementComponent*)right->componentIDMap[movementComponentID]; if (m->moving) { right = nullptr; } }
+			}
 
-			Entity* left = ECS::main.cubes[cube->x - 1][cube->y + 0][cube->z + 0];
-			if (left != nullptr) { MovementComponent* m = (MovementComponent*)left->componentIDMap[movementComponentID]; if (m->moving) { left = nullptr; } }
+			Entity* left = nullptr;
+			if (cube->x - 1 > 0)
+			{
+				left = ECS::main.cubes[cube->x - 1][cube->y + 0][cube->z + 0];
+				if (left != nullptr) { MovementComponent* m = (MovementComponent*)left->componentIDMap[movementComponentID]; if (m->moving) { left = nullptr; } }
+			}
 
-			Entity* back = ECS::main.cubes[cube->x + 0][cube->y + 0][cube->z + 1];
-			if (back != nullptr) { MovementComponent* m = (MovementComponent*)back->componentIDMap[movementComponentID]; if (m->moving) { back = nullptr; } }
+			Entity* back = nullptr;
+			if (cube->z + 1 < ECS::main.maxDepth)
+			{
+				back = ECS::main.cubes[cube->x + 0][cube->y + 0][cube->z + 1];
+				if (back != nullptr) { MovementComponent* m = (MovementComponent*)back->componentIDMap[movementComponentID]; if (m->moving) { back = nullptr; } }
+			}
 
-			Entity* front = ECS::main.cubes[cube->x + 0][cube->y + 0][cube->z - 1];
-			if (front != nullptr) { MovementComponent* m = (MovementComponent*)front->componentIDMap[movementComponentID]; if (m->moving) { front = nullptr; } }
+			Entity* front = nullptr;
+			if (cube->z - 1 > 0)
+			{
+				front = ECS::main.cubes[cube->x + 0][cube->y + 0][cube->z - 1];
+				if (front != nullptr) { MovementComponent* m = (MovementComponent*)front->componentIDMap[movementComponentID]; if (m->moving) { front = nullptr; } }
+			}
 
 			if (up == nullptr || down == nullptr || right == nullptr || left == nullptr || back == nullptr || front == nullptr)
 			{

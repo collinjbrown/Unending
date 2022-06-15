@@ -40,9 +40,9 @@ public:
 
 	static const int cubeSize = 10;
 
-	static const int maxWidth = 50;
-	static const int maxHeight = 50;
-	static const int maxDepth = 50;
+	static const int maxWidth = 200;
+	static const int maxHeight = 200;
+	static const int maxDepth = 200;
 
 	Entity* player;
 	Entity* cubes[maxWidth][maxHeight][maxDepth];
@@ -76,8 +76,8 @@ public:
 
 	// bool CheckAutofrendation(CubeComponent* activeCube, Face activeFace, Face rollDirection); // Self-Crushing
 
-	void FloodFill(std::vector<CubeComponent*>& inside, CubeComponent* cube);
-	std::vector<CubeComponent*> DetermineStructure(CubeComponent* cube, Face direction);
+	void FloodFill(std::vector<CubeComponent*>& inside, CubeComponent* cube, CubeComponent* activeCube, CubeComponent* fulcrum);
+	std::vector<CubeComponent*> DetermineStructure(CubeComponent* cube, CubeComponent* fulcrum, Face direction);
 
 	std::pair<Face, bool> FindFulcrum(CubeComponent* activeCube, Face activeFace, Face rollDirection);
 	Face DetermineRollDirection(Face fulcrum, Face activeFace, Face rollDirection);

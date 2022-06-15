@@ -222,7 +222,6 @@ public:
 
 	Quaternion baseQuaternion;
 
-	void SetRotation(glm::vec3 rotation);
 	ActorComponent(Entity* entity, bool active, float speed, Face face, Entity* cube);
 }; 
 
