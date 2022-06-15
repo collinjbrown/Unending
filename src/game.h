@@ -48,6 +48,7 @@ public:
 
 	float fieldOfView = 180.0f;
 
+	glm::vec3 cameraForward = { 0.0f, 0.0f, -1.0f };
 	ProjectionType projectionType = ProjectionType::orthographic;
 
 	void UpdateProjection();

@@ -59,6 +59,8 @@ int main(void)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	glCullFace(GL_BACK);
+
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
@@ -136,7 +138,8 @@ int main(void)
 		Game::main.UpdateProjection();
 		glm::vec3 cameraPosition = Game::main.cameraPosition;// *Game::main.zoom;
 		glm::vec3 up = Util::Rotate(glm::vec3(0.0f, 1.0f, 0.0f), Game::main.cameraRotation);
-		glm::vec3 center = cameraPosition + Util::Rotate(glm::vec3(0.0f, 0.0f, -1.0f), Game::main.cameraRotation);
+		Game::main.cameraForward = Util::Rotate(glm::vec3(0.0f, 0.0f, -1.0f), Game::main.cameraRotation);
+		glm::vec3 center = cameraPosition + Game::main.cameraForward;
 		Game::main.view = glm::lookAt(cameraPosition, center, up);
 
 		if (Game::main.projectionType == ProjectionType::perspective)

@@ -4,6 +4,7 @@
 
 #include "game.h"
 #include "util.h"
+#include <glm/gtx/norm.hpp>
 
 Renderer::Renderer(GLuint whiteTexture) : batches(1), shader("assets/shaders/base.vert", "assets/shaders/base.frag"), whiteTextureID(whiteTexture)
 {
@@ -115,6 +116,15 @@ void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm
 	glm::vec3 farBottomLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f),	q);// * Game::main.zoom;
 	glm::vec3 farTopLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, size.y / 2.0f, size.z / 2.0f),		q);// * Game::main.zoom;
 
+	float f = glm::length2(Game::main.cameraForward - Util::Rotate({ 0.0f, 0.0f, 1.0f }, q));
+	float b = glm::length2(Game::main.cameraForward - Util::Rotate({ 0.0f, 0.0f, -1.0f }, q));
+	float u = glm::length2(Game::main.cameraForward - Util::Rotate({ 0.0f, -1.0f, 0.0f }, q));
+	float d = glm::length2(Game::main.cameraForward - Util::Rotate({ 0.0f, 1.0f, 0.0f }, q));
+	float r = glm::length2(Game::main.cameraForward - Util::Rotate({ -1.0f, 0.0f, 0.0f }, q));
+	float l = glm::length2(Game::main.cameraForward - Util::Rotate({ 1.0f, 0.0f, 0.0f }, q));
+
+	float minDiff = 2.0f;
+
 	// Front	- All the close verts.
 	Quad front
 	{
@@ -169,12 +179,19 @@ void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm
 		{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	1.0,	0.25,	(float)textureID }
 	};
 
-	PrepareQuad(front,	textureID);
-	PrepareQuad(left,	textureID);
-	PrepareQuad(back,	textureID);
-	PrepareQuad(right,	textureID);
-	PrepareQuad(top,	textureID);
-	PrepareQuad(bottom,	textureID);
+	if (f > minDiff) PrepareQuad(front,		textureID);
+	if (l > minDiff) PrepareQuad(left,		textureID);
+	if (b > minDiff) PrepareQuad(back,		textureID);
+	if (r > minDiff) PrepareQuad(right,		textureID);
+	if (u > minDiff) PrepareQuad(top,		textureID);
+	if (d > minDiff) PrepareQuad(bottom,	textureID);
+
+	/*PrepareQuad(front, textureID);
+	PrepareQuad(left, textureID);
+	PrepareQuad(back, textureID);
+	PrepareQuad(right, textureID);
+	PrepareQuad(top, textureID);
+	PrepareQuad(bottom, textureID);*/
 }
 
 void Renderer::PrepareQuad(Quad& input, int textureID)
