@@ -468,7 +468,7 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 
 		glm::vec3 forward = Util::GetRelativeUp(roll);
 		if (forward.z != 0) forward *= -1.0f;
-		glm::vec3 up = Util::GetRelativeUp(oppFulcrum);
+		glm::vec3 up = Util::GetRelativeUp(landingFace);
 		if (up.z != 0) up *= -1.0f;
 		float dist = glm::length(pc->position - worldDifference);
 		float length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
@@ -482,10 +482,24 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 		{
 			glm::vec3 cubeSpace = WorldToCubeSpace(b.GetPoint(j));
 			Entity* e = GetCube(cubeSpace.x, cubeSpace.y, cubeSpace.z);
+
 			if (e != nullptr && e != c->entity)
 			{
-				minT = std::min(lastSafeT, minT);
-				break;
+				bool isAffected = false;
+
+				for (int m = 0; m < affectedCubes.size(); m++)
+				{
+					if (e == affectedCubes[m]->entity)
+					{
+						isAffected = true;
+					}
+				}
+
+				if (!isAffected)
+				{
+					minT = std::min(lastSafeT, minT);
+					break;
+				}
 			}
 			else
 			{
@@ -569,6 +583,13 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 		length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
 		p1 = pc->position + (forward * length);
 		p2 = finalPoint + (up * length);
+
+		CubeComponent* lastCube = affectedCubes[j - 1];
+		if (abs(cubeSpace.x - lastCube->x) + abs(cubeSpace.y - lastCube->y) + abs(cubeSpace.z - lastCube->z) > 1)
+		{
+			cubeSpace = (cubeSpace + glm::vec3(lastCube->x, lastCube->y, lastCube->z)) / 2.0f;
+		}
+		finalPoint = CubeToWorldSpace(cubeSpace.x, cubeSpace.y, cubeSpace.z);
 
 		mc->RegisterMovement(3.5f, { { pc->position, p1, p2, finalPoint } }, 1.0f);
 		mc->RegisterMovement(3.5f, { { pc->quaternion, affRot, affRot2 } }, 1.0f);
@@ -791,7 +812,7 @@ void ECS::Update(float deltaTime)
 			ECS::main.cubes[mapWidth - 2 + midMaxX][-i + midMaxY][mapDepth - 1 + midMaxZ] = cube;
 		}
 
-		for (int i = 1; i < 10; i++)
+		/*for (int i = 1; i < 10; i++)
 		{
 			Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 2 + midMaxX) + " / " + std::to_string(-i + midMaxY) + " / " + std::to_string(midMaxZ + 1));
 			ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
@@ -799,7 +820,7 @@ void ECS::Update(float deltaTime)
 			ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2 + midMaxX, -i + midMaxY, midMaxZ + 1);
 			ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
 			ECS::main.cubes[mapWidth - 2 + midMaxX][-i + midMaxY][midMaxZ + 1] = cube;
-		}
+		}*/
 
 		Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 1 + midMaxX) + " / " + std::to_string(mapHeight + midMaxY) + " / " + std::to_string(mapDepth - 1 + midMaxZ));
 		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
