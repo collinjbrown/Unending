@@ -104,7 +104,7 @@ Bundle Renderer::DetermineBatch(int textureID)
 	}
 }
 
-void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID, bool showFront, bool showBack, bool showTop, bool showBottom, bool showRight, bool showLeft)
+void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID)
 {
 	glm::vec3 closeTopRight		= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f),		q);// *Game::main.zoom;
 	glm::vec3 closeBottomRight	= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f),	q);// * Game::main.zoom;
@@ -120,8 +120,8 @@ void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm
 	float b = glm::length2(Game::main.cameraForward - Util::Rotate({ 0.0f, 0.0f, -1.0f }, q));
 	float u = glm::length2(Game::main.cameraForward - Util::Rotate({ 0.0f, -1.0f, 0.0f }, q));
 	float d = glm::length2(Game::main.cameraForward - Util::Rotate({ 0.0f, 1.0f, 0.0f }, q));
-	float r = glm::length2(Game::main.cameraForward - Util::Rotate({ -1.0f, 0.0f, 0.0f }, q));
-	float l = glm::length2(Game::main.cameraForward - Util::Rotate({ 1.0f, 0.0f, 0.0f }, q));
+	float r = glm::length2(Game::main.cameraForward - Util::Rotate({ 1.0f, 0.0f, 0.0f }, q));
+	float l = glm::length2(Game::main.cameraForward - Util::Rotate({ -1.0f, 0.0f, 0.0f }, q));
 
 	float minDiff = 2.0f;
 
@@ -143,8 +143,8 @@ void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm
 		{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.5,	(float)textureID }
 	};
 
-	// Left		- Close left, top and bottom, and far left, top and bottom.		- The far verts will be treated as the quad's left, top and bottom.
-	Quad left
+	// Right		- Close left, top and bottom, and far left, top and bottom.		- The far verts will be treated as the quad's left, top and bottom.
+	Quad right
 	{
 		{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.5,	(float)textureID },
 		{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.75,	(float)textureID },
@@ -152,8 +152,8 @@ void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm
 		{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.5,	(float)textureID }
 	};
 
-	// Right	- Close right, top and bottom, and far right, top and bottom.	- The close verts will be treated as the quad's left, top and bottom.
-	Quad right
+	// Left	- Close right, top and bottom, and far right, top and bottom.	- The close verts will be treated as the quad's left, top and bottom.
+	Quad left
 	{
 		{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.25,	(float)textureID },
 		{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.0,	(float)textureID },
@@ -179,12 +179,12 @@ void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm
 		{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	1.0,	0.25,	(float)textureID }
 	};
 
-	if (f > minDiff && showFront) PrepareQuad(front,	textureID);
-	if (l > minDiff && showRight) PrepareQuad(left,		textureID);
-	if (b > minDiff && showBack) PrepareQuad(back,		textureID);
-	if (r > minDiff && showLeft) PrepareQuad(right,		textureID);
-	if (u > minDiff && showBottom) PrepareQuad(top,		textureID);
-	if (d > minDiff && showTop) PrepareQuad(bottom,		textureID);
+	if (f > minDiff) PrepareQuad(front,		textureID);
+	if (l > minDiff) PrepareQuad(left,		textureID);
+	if (b > minDiff) PrepareQuad(back,		textureID);
+	if (r > minDiff) PrepareQuad(right,		textureID);
+	if (u > minDiff) PrepareQuad(top,		textureID);
+	if (d > minDiff) PrepareQuad(bottom,	textureID);
 
 	/*PrepareQuad(front, textureID);
 	PrepareQuad(left, textureID);
