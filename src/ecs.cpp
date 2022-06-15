@@ -314,8 +314,21 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 			Entity* e = GetCube(cubeSpace.x, cubeSpace.y, cubeSpace.z);
 			if (e != nullptr && e != c->entity)
 			{
-				minT = std::min(lastSafeT, minT);
-				break;
+				bool isAffected = false;
+
+				for (int m = 0; m < affectedCubes.size(); m++)
+				{
+					if (e == affectedCubes[m]->entity)
+					{
+						isAffected = true;
+					}
+				}
+				
+				if (!isAffected)
+				{
+					minT = std::min(lastSafeT, minT);
+					break;
+				}
 			}
 			else
 			{
@@ -676,7 +689,7 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 
 		// Voila, easy as that.
 		// And if there is something for us to land on there, let's do it.
-		if (landingTarget != nullptr)
+		if (landingTarget != nullptr && affectedCubes.size() == 1)
 		{
 			// We can assume that the landing face is the sane as our roll direction.
 
@@ -1573,7 +1586,7 @@ void InputSystem::Update(int activeScene, float deltaTime)
 				Quaternion target = Util::EulerToQuaternion(Game::main.baseCameraRotation);
 				Quaternion slerp = Util::Slerp(camRot, target, deltaTime * 8.0f);
 
-				Game::main.cameraRotation = slerp;
+				camRot = slerp;
 
 				if (Util::QuaternionDistance(camRot, target) < 0.000005f)
 				{
