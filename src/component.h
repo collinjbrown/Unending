@@ -255,6 +255,7 @@ struct BezierMovement : public Movement
 {
 	BezierCurve curve;
 	float t = 0.0f;
+	float targetT = 1.0f;
 };
 
 struct RotatingMovement : public Movement
@@ -266,6 +267,7 @@ struct BezierRotatingMovement : public Movement
 {
 	BezierQuaternion curve;
 	float t = 0.0f;
+	float targetT = 1.0f;
 };
 
 class MovementComponent : public Component
@@ -274,10 +276,10 @@ public:
 	bool moving;
 	std::vector<Movement*> queue;
 
-	void RegisterMovement(float speed, BezierCurve curve);
 	void RegisterMovement(float speed, glm::vec3 target);
 	void RegisterMovement(float speed, Quaternion target);
-	void RegisterMovement(float speed, BezierQuaternion curve);
+	void RegisterMovement(float speed, BezierCurve curve, float targetT);
+	void RegisterMovement(float speed, BezierQuaternion curve, float targetT);
 	MovementComponent(Entity* entity, bool active);
 };
 

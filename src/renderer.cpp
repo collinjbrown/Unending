@@ -104,7 +104,7 @@ Bundle Renderer::DetermineBatch(int textureID)
 	}
 }
 
-void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID)
+void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID, bool showFront, bool showBack, bool showTop, bool showBottom, bool showRight, bool showLeft)
 {
 	glm::vec3 closeTopRight		= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f),		q);// *Game::main.zoom;
 	glm::vec3 closeBottomRight	= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f),	q);// * Game::main.zoom;
@@ -179,12 +179,12 @@ void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm
 		{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	1.0,	0.25,	(float)textureID }
 	};
 
-	if (f > minDiff) PrepareQuad(front,		textureID);
-	if (l > minDiff) PrepareQuad(left,		textureID);
-	if (b > minDiff) PrepareQuad(back,		textureID);
-	if (r > minDiff) PrepareQuad(right,		textureID);
-	if (u > minDiff) PrepareQuad(top,		textureID);
-	if (d > minDiff) PrepareQuad(bottom,	textureID);
+	if (f > minDiff && showFront) PrepareQuad(front,	textureID);
+	if (l > minDiff && showRight) PrepareQuad(left,		textureID);
+	if (b > minDiff && showBack) PrepareQuad(back,		textureID);
+	if (r > minDiff && showLeft) PrepareQuad(right,		textureID);
+	if (u > minDiff && showBottom) PrepareQuad(top,		textureID);
+	if (d > minDiff && showTop) PrepareQuad(bottom,		textureID);
 
 	/*PrepareQuad(front, textureID);
 	PrepareQuad(left, textureID);

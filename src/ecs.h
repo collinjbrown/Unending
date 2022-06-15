@@ -65,6 +65,7 @@ public:
 	void RegisterComponent(Component* component, Entity* entity);
 
 	glm::vec3 CubeToWorldSpace(int x, int y, int z);
+	glm::vec3 WorldToCubeSpace(glm::vec3 position);
 
 	Entity* GetCube(int x, int y, int z);
 	void MoveCube(CubeComponent* cube, int x, int y, int z);

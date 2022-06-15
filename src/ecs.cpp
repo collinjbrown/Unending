@@ -17,6 +17,11 @@ glm::vec3 ECS::CubeToWorldSpace(int x, int y, int z)
 	return glm::vec3((float)cubeSize * x, (float)cubeSize * y, (float)cubeSize * -z);
 }
 
+glm::vec3 ECS::WorldToCubeSpace(glm::vec3 position)
+{
+	return glm::vec3((int)(position.x / cubeSize), (int)(position.y / cubeSize), (int)(-position.z / cubeSize));
+}
+
 void ECS::PositionCube(CubeComponent* cube, int x, int y, int z)
 {
 	PositionComponent* pos = (PositionComponent*)cube->entity->componentIDMap[positionComponentID];
@@ -243,8 +248,6 @@ std::vector<CubeComponent*> ECS::DetermineStructure(CubeComponent* cube, Face di
 
 void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirection, Entity* landingTarget, Face landingFace, std::vector<CubeComponent*> affectedCubes)
 {
-	// std::cout << "Quarter Roll\n";
-
 	// We need to grab some components first.
 	CubeComponent* activeCube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
 	PositionComponent* pos = (PositionComponent*)actor->cube->componentIDMap[positionComponentID];
@@ -257,6 +260,50 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 
 	// This is a secret tool that will help us later.
 	glm::vec3 pivotPos = glm::vec3(activeCube->x, activeCube->y, activeCube->z);
+
+	// This is going to be the smallest t value at which a collision occurs.
+	float minT = 1.0f;
+
+	// First, we need to sweep the whole cube structure over its whole course to see if it collides with anything.
+	// There might be a more elegant way to do this, but we're just gonna go ahead and do it the slow(er) way.
+	for (int i = 0; i < affectedCubes.size(); i++)
+	{
+		// We need to grab the cube and position components, as well as their movement components.
+		CubeComponent* c = affectedCubes[i];
+		PositionComponent* pc = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
+		MovementComponent* mc = (MovementComponent*)c->entity->componentIDMap[movementComponentID];
+
+		int dX = pivotPos.x - c->x;
+		int dY = pivotPos.y - c->y;
+		int dZ = pivotPos.z - c->z;
+
+		Quaternion diffRot = Util::GetRollRotation(landingFace, roll, { 1, 0, 0, 0 }, 1);
+		glm::vec3 newDifference = Util::Rotate(glm::vec3(dX, dY, dZ), diffRot);
+
+		// And then we need to convert that to world space, instead of cube space.
+		glm::vec3 worldDifference = CubeToWorldSpace(activeCube->x + (int)newDifference.x, activeCube->y + (int)newDifference.y, activeCube->z + (int)newDifference.z);
+
+		glm::vec3 forward = Util::GetRelativeUp(roll);
+		if (forward.z != 0) forward *= -1.0f;
+		glm::vec3 up = Util::GetRelativeUp(landingFace);
+		if (up.z != 0) up *= -1.0f;
+		float dist = glm::length(pc->position - worldDifference);
+		float length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
+		glm::vec3 p1 = pc->position + (forward * length);
+		glm::vec3 p2 = worldDifference + (up * length);
+
+		BezierCurve b = { { pc->position, p1, p2, worldDifference } };
+
+		for (float j = 0.0f; j < 1.0f; j += 0.05f)
+		{
+			glm::vec3 cubeSpace = WorldToCubeSpace(b.GetPoint(j));
+			std::cout << "Spot: " + std::to_string(cubeSpace.x) + " / " + std::to_string(cubeSpace.y) + " / " + std::to_string(cubeSpace.z) << std::endl;
+			if (GetCube(cubeSpace.x, cubeSpace.y, cubeSpace.z) != nullptr && cubeSpace.x != c->x && cubeSpace.y != c->y && cubeSpace.z != c->z)
+			{
+				minT = std::min(j, minT);
+			}
+		}
+	}
 
 	// Now we need to figure out how the cube is gonna roll.
 	Quaternion newRotation = Util::GetRollRotation(landingFace, roll, pos->quaternion, 2);
@@ -278,16 +325,16 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 		float length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
 		glm::vec3 p1 = pos->position + (forward * length);
 		glm::vec3 p2 = landingWorldPosition + (up * length);
-		mover->RegisterMovement(3.5f, { { pos->position, p1, p2, landingWorldPosition } });
+		mover->RegisterMovement(3.5f, { { pos->position, p1, p2, landingWorldPosition } }, minT);
 	}
 	else
 	{
 		glm::vec3 leap = (glm::normalize(landingUp) * 5.0f);
 		if (landingUp.z != 0) leap *= -1.0f;
 		glm::vec3 zenith = ((pos->position + landingWorldPosition) / 2.0f) + leap;
-		mover->RegisterMovement(3.5f, { { pos->position, zenith, landingWorldPosition } });
+		mover->RegisterMovement(3.5f, { { pos->position, zenith, landingWorldPosition } }, minT);
 	}
-	mover->RegisterMovement(3.5f, {{ pos->quaternion, newRotation }});
+	mover->RegisterMovement(3.5f, {{ pos->quaternion, newRotation }}, minT);
 
 	// And finally position the active cube in the right position.
 	MoveCube(activeCube, landingCubePosition.x, landingCubePosition.y, landingCubePosition.z);
@@ -338,16 +385,14 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 		glm::vec3 p1 = pc->position + (forward * length);
 		glm::vec3 p2 = worldDifference + (up * length);
 
-		mc->RegisterMovement(3.5f, { { pc->position, p1, p2, worldDifference } });
-		mc->RegisterMovement(3.5f, { { pc->quaternion, affRot } });
+		mc->RegisterMovement(3.5f, { { pc->position, p1, p2, worldDifference } }, minT);
+		mc->RegisterMovement(3.5f, { { pc->quaternion, affRot } }, minT);
 		MoveCube(c, activeCube->x + (int)newDifference.x, activeCube->y + (int)newDifference.y, activeCube->z + (int)newDifference.z);
 	}
 }
 
 void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Face rollDirection, Entity* landingTarget, Face landingFace, std::vector<CubeComponent*> affectedCubes)
 {
-	// std::cout << "Half Roll\n";
-
 	// We need to grab some components first.
 	CubeComponent* activeCube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
 	PositionComponent* pos = (PositionComponent*)actor->cube->componentIDMap[positionComponentID];
@@ -361,9 +406,53 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 	// This is a secret tool that will help us later.
 	glm::vec3 pivotPos = glm::vec3(activeCube->x, activeCube->y, activeCube->z);
 
+	// This is going to be the smallest t value at which a collision occurs.
+	float minT = 1.0f;
+
+	// First, we need to sweep the whole cube structure over its whole course to see if it collides with anything.
+	// There might be a more elegant way to do this, but we're just gonna go ahead and do it the slow(er) way.
+	for (int i = 0; i < affectedCubes.size(); i++)
+	{
+		// We need to grab the cube and position components, as well as their movement components.
+		CubeComponent* c = affectedCubes[i];
+		PositionComponent* pc = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
+		MovementComponent* mc = (MovementComponent*)c->entity->componentIDMap[movementComponentID];
+
+		int dX = pivotPos.x - c->x;
+		int dY = pivotPos.y - c->y;
+		int dZ = pivotPos.z - c->z;
+
+		Quaternion diffRot = Util::GetRollRotation(oppFulcrum, roll, { 1, 0, 0, 0 }, 1);
+		glm::vec3 newDifference = Util::Rotate(glm::vec3(dX, dY, dZ), diffRot);
+
+		// And then we need to convert that to world space, instead of cube space.
+		glm::vec3 worldDifference = CubeToWorldSpace(activeCube->x + (int)newDifference.x, activeCube->y + (int)newDifference.y, activeCube->z + (int)newDifference.z);
+
+		glm::vec3 forward = Util::GetRelativeUp(roll);
+		if (forward.z != 0) forward *= -1.0f;
+		glm::vec3 up = Util::GetRelativeUp(oppFulcrum);
+		if (up.z != 0) up *= -1.0f;
+		float dist = glm::length(pc->position - worldDifference);
+		float length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
+		glm::vec3 p1 = pc->position + (forward * length);
+		glm::vec3 p2 = worldDifference + (up * length);
+
+		BezierCurve b = { { pc->position, p1, p2, worldDifference } };
+
+		for (float j = 0; j < 1.0f; j += 0.05f)
+		{
+			glm::vec3 cubeSpace = WorldToCubeSpace(b.GetPoint(j));
+			if (GetCube(cubeSpace.x, cubeSpace.y, cubeSpace.z) != nullptr && cubeSpace.x != c->x && cubeSpace.y != c->y && cubeSpace.z != c->z)
+			{
+				minT = std::min(j, minT);
+			}
+		}
+	}
+
 	// Now we need to figure out how the cube is gonna roll.
 	// std::cout << "Roll Faces: " + std::to_string((int)standingFace) + " / " + std::to_string((int)roll) << std::endl;
 	Quaternion newRotation = Util::GetRollRotation(oppFulcrum, roll, pos->quaternion, 2);
+	Quaternion newRotation2 = Util::GetRollRotation(oppFulcrum, roll, newRotation, 2);
 
 	// And then we can figure out where it is going to land in cube and world space.
 	glm::vec3 landingUp = Util::GetRelativeUp(landingFace);
@@ -374,15 +463,15 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 	// The bezier curve is a little complicated.
 	glm::vec3 forward = Util::GetRelativeUp(roll);
 	if (forward.z != 0) forward *= -1.0f;
-	glm::vec3 up = Util::GetRelativeUp(landingFace);
+	glm::vec3 up = Util::GetRelativeUp(oppFulcrum);
 	if (up.z != 0) up *= -1.0f;
 	float dist = glm::length(pos->position - landingWorldPosition);
 	float length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
 	glm::vec3 p1 = pos->position + (forward * length);
 	glm::vec3 p2 = landingWorldPosition + (up * length);
 
-	mover->RegisterMovement(3.5f, { { pos->position, p1, p2, landingWorldPosition } });
-	mover->RegisterMovement(3.5f, { { pos->quaternion, newRotation } });
+	mover->RegisterMovement(3.5f, { { pos->position, p1, p2, landingWorldPosition } }, minT);
+	mover->RegisterMovement(3.5f, { { pos->quaternion, newRotation, newRotation2 } }, minT);
 
 	// And finally position the active cube in the right position.
 	MoveCube(activeCube, landingCubePosition.x, landingCubePosition.y, landingCubePosition.z);
@@ -405,7 +494,7 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 		// There are two rotations necessary here.
 		// The first is the rotation of the actual position component.
 		Quaternion affRot = Util::GetRollRotation(oppFulcrum, roll, pc->quaternion, 2);
-		// Quaternion affRot2 = Util::GetRollRotation(oppFulcrum, roll, affRot, 2);
+		Quaternion affRot2 = Util::GetRollRotation(oppFulcrum, roll, affRot, 2);
 
 		// And the second is the rotation in space around the initial cube.
 		Quaternion diffRot = Util::GetRollRotation(oppFulcrum, roll, { 1, 0, 0, 0 }, 1);
@@ -425,17 +514,17 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 		glm::vec3 worldDifference = CubeToWorldSpace(activeCube->x + (int)newDifference.x, activeCube->y + (int)newDifference.y, activeCube->z + (int)newDifference.z);
 
 		// Finally, we can register the necessary movements with the movement component and actually finalize the movement of the cube in cube space.
-		glm::vec3 forward = Util::GetRelativeUp(roll);
+		forward = Util::GetRelativeUp(roll);
 		if (forward.z != 0) forward *= -1.0f;
-		glm::vec3 up = Util::GetRelativeUp(landingFace);
+		up = Util::GetRelativeUp(landingFace);
 		if (up.z != 0) up *= -1.0f;
-		float dist = glm::length(pc->position - worldDifference);
-		float length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
-		glm::vec3 p1 = pc->position + (forward * length);
-		glm::vec3 p2 = worldDifference + (up * length);
+		dist = glm::length(pc->position - worldDifference);
+		length = dist * sin(45) * sin(90) * (2.0 / 3.0f);
+		p1 = pc->position + (forward * length);
+		p2 = worldDifference + (up * length);
 
-		mc->RegisterMovement(3.5f, { { pc->position, p1, p2, worldDifference } });
-		mc->RegisterMovement(3.5f, { { pc->quaternion, affRot } });
+		mc->RegisterMovement(3.5f, { { pc->position, p1, p2, worldDifference } }, minT);
+		mc->RegisterMovement(3.5f, { { pc->quaternion, affRot, affRot2 } }, minT);
 		MoveCube(c, activeCube->x + (int)newDifference.x, activeCube->y + (int)newDifference.y, activeCube->z + (int)newDifference.z);
 	}
 }
@@ -653,6 +742,16 @@ void ECS::Update(float deltaTime)
 			ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2 + midMaxX, -i + midMaxY, mapDepth - 1 + midMaxZ);
 			ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
 			ECS::main.cubes[mapWidth - 2 + midMaxX][-i + midMaxY][mapDepth - 1 + midMaxZ] = cube;
+		}
+
+		for (int i = 1; i < 10; i++)
+		{
+			Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 2 + midMaxX) + " / " + std::to_string(-i + midMaxY) + " / " + std::to_string(midMaxZ));
+			ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
+			ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 2 + midMaxX, -i + midMaxY, midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
+			ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2 + midMaxX, -i + midMaxY, midMaxZ);
+			ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
+			ECS::main.cubes[mapWidth - 2 + midMaxX][-i + midMaxY][midMaxZ] = cube;
 		}
 
 		Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 1 + midMaxX) + " / " + std::to_string(mapHeight + midMaxY) + " / " + std::to_string(mapDepth - 1 + midMaxZ));
@@ -953,7 +1052,7 @@ MovementComponent::MovementComponent(Entity* entity, bool active)
 	this->moving = false;
 }
 
-void MovementComponent::RegisterMovement(float speed, BezierCurve curve)
+void MovementComponent::RegisterMovement(float speed, BezierCurve curve, float targetT)
 {
 	this->moving = true;
 
@@ -963,6 +1062,7 @@ void MovementComponent::RegisterMovement(float speed, BezierCurve curve)
 	m->speed = speed;
 	m->curve = curve;
 	m->t = 0.0f;
+	m->targetT = targetT;
 	this->queue.push_back(m);
 }
 
@@ -990,7 +1090,7 @@ void MovementComponent::RegisterMovement(float speed, Quaternion target)
 	this->queue.push_back(m);
 }
 
-void MovementComponent::RegisterMovement(float speed, BezierQuaternion curve)
+void MovementComponent::RegisterMovement(float speed, BezierQuaternion curve, float targetT)
 {
 	this->moving = true;
 
@@ -999,6 +1099,7 @@ void MovementComponent::RegisterMovement(float speed, BezierQuaternion curve)
 	m->movementType = MovementType::bezierRotation;
 	m->speed = speed;
 	m->curve = curve;
+	m->targetT = targetT;
 	this->queue.push_back(m);
 }
 
@@ -1018,7 +1119,19 @@ void CubeSystem::Update(int activeScene, float deltaTime)
 			cube->active && cube->entity->GetScene() == 0)
 		{
 			PositionComponent* pos = (PositionComponent*)cube->entity->componentIDMap[positionComponentID];
-			Game::main.renderer->PrepareCube(cube->size, pos->position, pos->quaternion, cube->color, cube->texture->ID);
+
+			Entity* up = ECS::main.cubes[cube->x][cube->y + 1][cube->z];
+			Entity* down = ECS::main.cubes[cube->x][cube->y - 1][cube->z];
+			Entity* right = ECS::main.cubes[cube->x + 1][cube->y][cube->z];
+			Entity* left = ECS::main.cubes[cube->x - 1][cube->y][cube->z];
+			Entity* back = ECS::main.cubes[cube->x][cube->y][cube->z + 1];
+			Entity* front = ECS::main.cubes[cube->x][cube->y][cube->z - 1];
+
+			if (up != nullptr || down != nullptr || right != nullptr || left != nullptr || back != nullptr || front != nullptr)
+			{
+				Game::main.renderer->PrepareCube(cube->size, pos->position, pos->quaternion, cube->color, cube->texture->ID,
+					(front == nullptr), (back == nullptr), (up == nullptr), (down == nullptr), (right == nullptr), (left == nullptr));
+			}
 		}
 	}
 }
@@ -1593,9 +1706,9 @@ void MovementSystem::Update(int activeScene, float deltaTime)
 					curving->t += deltaTime * curving->speed;
 					pos->position = curving->curve.GetPoint(curving->t);
 
-					if (curving->t >= 1.0f)
+					if (curving->t >= curving->targetT)
 					{
-						pos->position = curving->curve.GetPoint(1.0f);
+						pos->position = curving->curve.GetPoint(curving->targetT);
 						finishedMoves.push_back(m);
 					}
 				}
@@ -1624,9 +1737,9 @@ void MovementSystem::Update(int activeScene, float deltaTime)
 					curving->t += deltaTime * curving->speed;
 					pos->quaternion = curving->curve.GetQuaternion(curving->t);
 
-					if (curving->t >= 1.0f)
+					if (curving->t >= curving->targetT)
 					{
-						pos->quaternion = curving->curve.GetQuaternion(1.0f);
+						pos->quaternion = curving->curve.GetQuaternion(curving->targetT);
 						finishedMoves.push_back(m);
 					}
 				}
