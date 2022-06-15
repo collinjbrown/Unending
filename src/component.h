@@ -81,6 +81,33 @@ struct BezierCurve
 	}
 };
 
+struct BezierQuaternion
+{
+	std::vector<Quaternion> rotations;
+
+	Quaternion GetQuaternion(float t)
+	{
+		std::vector<Quaternion> qs = rotations;
+		std::vector<Quaternion> tmp;
+
+		for (int i = 0; i < rotations.size(); i++)
+		{
+			for (int j = 0; j < qs.size() - 1; j++)
+			{
+				tmp.push_back(Util::Slerp(qs[j], qs[j + 1], t));
+			}
+
+			qs = tmp;
+			tmp.clear();
+
+			if (qs.size() == 1)
+			{
+				return qs[0];
+			}
+		}
+	}
+};
+
 class PositionComponent : public Component
 {
 public:
@@ -199,7 +226,7 @@ public:
 	ActorComponent(Entity* entity, bool active, float speed, Face face, Entity* cube);
 }; 
 
-enum class MovementType { linear, bezier, rotation };
+enum class MovementType { linear, bezier, rotation, bezierRotation };
 
 struct Movement
 {
@@ -235,6 +262,12 @@ struct RotatingMovement : public Movement
 	Quaternion targetRotation;
 };
 
+struct BezierRotatingMovement : public Movement
+{
+	BezierQuaternion curve;
+	float t = 0.0f;
+};
+
 class MovementComponent : public Component
 {
 public:
@@ -244,6 +277,7 @@ public:
 	void RegisterMovement(float speed, BezierCurve curve);
 	void RegisterMovement(float speed, glm::vec3 target);
 	void RegisterMovement(float speed, Quaternion target);
+	void RegisterMovement(float speed, BezierQuaternion curve);
 	MovementComponent(Entity* entity, bool active);
 };
 
