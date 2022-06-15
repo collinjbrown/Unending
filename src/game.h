@@ -29,14 +29,14 @@ public:
 	glm::vec2 mousePosition = glm::vec2(0.0f, 0.0f);
 	glm::vec3 cameraPosition = glm::vec3(900.0f, 500.0f, 300.0f);
 	Quaternion cameraRotation = { 1, 0, 0, 0 };
-	glm::vec3 baseCameraRotation = glm::vec3(-0.77f, -0.77f, 0.0f);
+	glm::vec3 baseCameraRotation = glm::vec3(-0.77f, 0.77f, 0.0f);
 
 	float orthographicSpeedModifier = 100.0f;
 
-	float zoom = 8.5f;
+	float zoom = 0.16f;
 	float cameraSpeed = 80.0f;
-	float rotationSpeed = 20.0f;
-	float zoomSpeed = 10.0f;
+	float rotationSpeed = 0.5f;
+	float zoomSpeed = 1.0f;
 
 	float dTime = 1.0f;
 

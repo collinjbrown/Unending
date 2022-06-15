@@ -29,6 +29,9 @@ Quaternion Util::Slerp(Quaternion l, Quaternion r, float step)
 	q.w = coeff1 * l.w + coeff2 * r.w;
 
 	NormalizeQuaternion(q);
+
+	if (isnan(q.x) || isnan(q.y) || isnan(q.z)) return r;
+
 	return q;
 }
 
@@ -228,7 +231,6 @@ glm::vec3 Util::GetForward(Face up, Face right, bool corner)
 
 	if (relativeForward.z != 0) relativeForward *= -1.0f;
 	if ((up == Face::front || up == Face::back)) relativeForward *= -1.0f;
-	// if (corner && (up == Face::front || up == Face::back) && (right != Face::right && right != Face::left)) relativeForward *= -1.0f;
 
 	glm::vec3 relativeRight = glm::cross(relativeUp, relativeForward);
 

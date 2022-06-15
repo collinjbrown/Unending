@@ -105,15 +105,15 @@ Bundle Renderer::DetermineBatch(int textureID)
 
 void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID)
 {
-	glm::vec3 closeTopRight		= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f),		q) * Game::main.zoom;
-	glm::vec3 closeBottomRight	= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f),	q) * Game::main.zoom;
-	glm::vec3 closeBottomLeft	= Util::RotateRelative(	position,	position - (size / 2.0f),												q) * Game::main.zoom;
-	glm::vec3 closeTopLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f),	q) * Game::main.zoom;
+	glm::vec3 closeTopRight		= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f),		q);// *Game::main.zoom;
+	glm::vec3 closeBottomRight	= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f),	q);// * Game::main.zoom;
+	glm::vec3 closeBottomLeft	= Util::RotateRelative(	position,	position - (size / 2.0f),												q);// * Game::main.zoom;
+	glm::vec3 closeTopLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f),	q);// * Game::main.zoom;
 
-	glm::vec3 farTopRight		= Util::RotateRelative(	position,	position + (size / 2.0f),												q) * Game::main.zoom;
-	glm::vec3 farBottomRight	= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f),		q) * Game::main.zoom;
-	glm::vec3 farBottomLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f),	q) * Game::main.zoom;
-	glm::vec3 farTopLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, size.y / 2.0f, size.z / 2.0f),		q) * Game::main.zoom;
+	glm::vec3 farTopRight		= Util::RotateRelative(	position,	position + (size / 2.0f),												q);// * Game::main.zoom;
+	glm::vec3 farBottomRight	= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f),		q);// * Game::main.zoom;
+	glm::vec3 farBottomLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f),	q);// * Game::main.zoom;
+	glm::vec3 farTopLeft		= Util::RotateRelative(	position,	position + glm::vec3(-size.x / 2.0f, size.y / 2.0f, size.z / 2.0f),		q);// * Game::main.zoom;
 
 	// Front	- All the close verts.
 	Quad front
@@ -177,81 +177,6 @@ void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm
 	PrepareQuad(bottom,	textureID);
 }
 
-
-void Renderer::PrepareCube(int rows, int cols, int aisles, glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID)
-{
-	glm::vec3 closeTopRight = Util::RotateRelative(position, position + glm::vec3(size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f), q) * Game::main.zoom;
-	glm::vec3 closeBottomRight = Util::RotateRelative(position, position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, -size.z / 2.0f), q) * Game::main.zoom;
-	glm::vec3 closeBottomLeft = Util::RotateRelative(position, position - (size / 2.0f), q) * Game::main.zoom;
-	glm::vec3 closeTopLeft = Util::RotateRelative(position, position + glm::vec3(-size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f), q) * Game::main.zoom;
-
-	glm::vec3 farTopRight = Util::RotateRelative(position, position + (size / 2.0f), q) * Game::main.zoom;
-	glm::vec3 farBottomRight = Util::RotateRelative(position, position + glm::vec3(size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f), q) * Game::main.zoom;
-	glm::vec3 farBottomLeft = Util::RotateRelative(position, position + glm::vec3(-size.x / 2.0f, -size.y / 2.0f, size.z / 2.0f), q) * Game::main.zoom;
-	glm::vec3 farTopLeft = Util::RotateRelative(position, position + glm::vec3(-size.x / 2.0f, size.y / 2.0f, size.z / 2.0f), q) * Game::main.zoom;
-
-	// Front	- All the close verts.
-	Quad front
-	{
-		{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.25 * cols,	0.25 * rows,	(float)textureID },
-		{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.0 * cols,	0.25 * rows,	(float)textureID },
-		{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.0 * cols,	0.5 * rows,	(float)textureID },
-		{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25 * cols,	0.5 * rows,	(float)textureID }
-	};
-
-	// Back		- All the far verts.
-	Quad back
-	{
-		{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.5 * cols,	0.25 * rows,	(float)textureID },
-		{ farBottomLeft.x,		farBottomLeft.y,	farBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.75 * cols,	0.25 * rows,	(float)textureID },
-		{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.75 * cols,	0.5 * rows,	(float)textureID },
-		{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5 * cols,	0.5 * rows,	(float)textureID }
-	};
-
-	// Left		- Close left, top and bottom, and far left, top and bottom.		- The far verts will be treated as the quad's left, top and bottom.
-	Quad left
-	{
-		{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25 * cols,	0.5 * rows,	(float)textureID },
-		{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.25 * cols,	0.75 * rows,	(float)textureID },
-		{ farBottomLeft.x,		farBottomLeft.y,	farBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.5 * cols,	0.75 * rows,	(float)textureID },
-		{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.5 * cols,	0.5 * rows,	(float)textureID }
-	};
-
-	// Right	- Close right, top and bottom, and far right, top and bottom.	- The close verts will be treated as the quad's left, top and bottom.
-	Quad right
-	{
-		{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.25 * cols,	0.25 * rows,	(float)textureID },
-		{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.25 * cols,	0.0 * rows,	(float)textureID },
-		{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.5 * cols,	0.0 * rows,	(float)textureID },
-		{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5 * cols,	0.25 * rows,	(float)textureID }
-	};
-
-	// Top		- Close top, left and right, and far top, left and right.		- The left verts, far and close, will be treated as the quad's left, top and bottom.
-	Quad top
-	{
-		{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5 * cols,	0.5 * rows,	(float)textureID },
-		{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.5 * cols,	0.25 * rows,	(float)textureID },
-		{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25 * cols,	0.25 * rows,	(float)textureID },
-		{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25 * cols,	0.5 * rows,	(float)textureID }
-	};
-
-	// Bottom		- Close bottom, left and right, and far bottom, left and right.	- The right verts, far and close, will be treated as the quad's left, top and bottom.
-	Quad bottom
-	{
-		{ farBottomLeft.x,		farBottomLeft.y,	farBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.25 * rows,	(float)textureID },
-		{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.5 * rows,	(float)textureID },
-		{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	1.0,	0.5 * rows,	(float)textureID },
-		{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	1.0,	0.25 * rows,	(float)textureID }
-	};
-
-	PrepareQuad(front, textureID);
-	PrepareQuad(left, textureID);
-	PrepareQuad(back, textureID);
-	PrepareQuad(right, textureID);
-	PrepareQuad(top, textureID);
-	PrepareQuad(bottom, textureID);
-}
-
 void Renderer::PrepareQuad(Quad& input, int textureID)
 {
 	Bundle bundle = DetermineBatch(textureID);
@@ -282,10 +207,10 @@ void Renderer::PrepareQuad(glm::vec2 size, glm::vec3 position, Quaternion q, glm
 	Quad& quad = batch.buffer[batch.index];
 	batch.index++;
 
-	glm::vec3 topRight		= Util::RotateRelative(	position,	position + glm::vec3(	size.x / 2.0f,	size.y / 2.0f,	0.0f),	q) * Game::main.zoom;
-	glm::vec3 bottomRight	= Util::RotateRelative(	position,	position + glm::vec3(	size.x / 2.0f,	-size.y / 2.0f, 0.0f),	q) * Game::main.zoom;
-	glm::vec3 bottomLeft	= Util::RotateRelative(	position,	position + glm::vec3(	-size.x / 2.0f,	-size.y / 2.0f,	0.0f),	q) * Game::main.zoom;
-	glm::vec3 topLeft		= Util::RotateRelative(	position,	position + glm::vec3(	-size.x / 2.0f,	size.y / 2.0f, 0.0f),	q) * Game::main.zoom;
+	glm::vec3 topRight		= Util::RotateRelative(	position,	position + glm::vec3(	size.x / 2.0f,	size.y / 2.0f,	0.0f),	q);//  * Game::main.zoom;
+	glm::vec3 bottomRight	= Util::RotateRelative(	position,	position + glm::vec3(	size.x / 2.0f,	-size.y / 2.0f, 0.0f),	q);//  * Game::main.zoom;
+	glm::vec3 bottomLeft	= Util::RotateRelative(	position,	position + glm::vec3(	-size.x / 2.0f,	-size.y / 2.0f,	0.0f),	q);//  * Game::main.zoom;
+	glm::vec3 topLeft		= Util::RotateRelative(	position,	position + glm::vec3(	-size.x / 2.0f,	size.y / 2.0f, 0.0f),	q);//  * Game::main.zoom;
 
 	float cellXMod = 1.0f / cols;
 	float cellYMod = 1.0f / rows;

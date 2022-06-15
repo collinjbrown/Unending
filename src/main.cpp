@@ -134,10 +134,10 @@ int main(void)
 		}
 
 		Game::main.UpdateProjection();
-		glm::vec3 camRot = Util::QuaternionToEuler(Game::main.cameraRotation);
+		glm::vec3 cameraPosition = Game::main.cameraPosition;// *Game::main.zoom;
 		glm::vec3 up = Util::Rotate(glm::vec3(0.0f, 1.0f, 0.0f), Game::main.cameraRotation);
-		glm::vec3 center = Game::main.cameraPosition + Util::Rotate(glm::vec3(0.0f, 0.0f, -1.0f), Game::main.cameraRotation);
-		Game::main.view = glm::lookAt(Game::main.cameraPosition, center, up);
+		glm::vec3 center = cameraPosition + Util::Rotate(glm::vec3(0.0f, 0.0f, -1.0f), Game::main.cameraRotation);
+		Game::main.view = glm::lookAt(cameraPosition, center, up);
 
 		if (Game::main.projectionType == ProjectionType::perspective)
 		{

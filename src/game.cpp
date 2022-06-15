@@ -6,8 +6,8 @@ void Game::UpdateProjection()
 {
 	if (projectionType == ProjectionType::orthographic)
 	{
-		float halfWidth = windowWidth / 2.0f;
-		float halfHeight = windowHeight / 2.0f;
+		float halfWidth = (windowWidth / 2.0f) * zoom;
+		float halfHeight = (windowHeight / 2.0f) * zoom;
 
 		this->projection = glm::ortho(-halfWidth, halfWidth, -halfWidth, halfHeight, nearClip, farClip);
 

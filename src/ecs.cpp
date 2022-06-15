@@ -404,10 +404,10 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 
 		// There are two rotations necessary here.
 		// The first is the rotation of the actual position component.
-		Quaternion affRot = Util::GetRollRotation(landingFace, roll, pc->quaternion, 1);
+		Quaternion affRot = Util::GetRollRotation(oppFulcrum, roll, pc->quaternion, 2);
 
 		// And the second is the rotation in space around the initial cube.
-		Quaternion diffRot = Util::GetRollRotation(landingFace, roll, { 1, 0, 0, 0 }, 1);
+		Quaternion diffRot = Util::GetRollRotation(landingFace, roll, { 1, 0, 0, 0 }, 2);
 
 		// We need to record the initial difference in position between this cube
 		// and the cube we rolled earlier.
@@ -625,7 +625,7 @@ void ECS::Update(float deltaTime)
 
 		float cubeSize = (float)this->cubeSize;
 		int mapWidth = 5;
-		int mapHeight = 3;
+		int mapHeight = 5;
 		int mapDepth = 5;
 
 		for (int x = 0; x < mapWidth; x++)
@@ -644,14 +644,14 @@ void ECS::Update(float deltaTime)
 			}
 		}
 
-		for (int i = 0; i < 10; i++)
+		for (int i = 1; i < 10; i++)
 		{
-			Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 2 + midMaxX) + " / " + std::to_string(mapHeight - 1 + midMaxY) + " / " + std::to_string(mapDepth + i + midMaxZ));
+			Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 2 + midMaxX) + " / " + std::to_string(-i + midMaxY) + " / " + std::to_string(mapDepth - 1 + midMaxZ));
 			ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
-			ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 2 + midMaxX, mapHeight - 1 + midMaxY, mapDepth + i + midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
-			ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2 + midMaxX, mapHeight - 1 + midMaxY, mapDepth + i + midMaxZ);
+			ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 2 + midMaxX, -i + midMaxY, mapDepth - 1 + midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
+			ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2 + midMaxX, -i + midMaxY, mapDepth - 1 + midMaxZ);
 			ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-			ECS::main.cubes[mapWidth - 2 + midMaxX][mapHeight - 1 + midMaxY][mapDepth + i + midMaxZ] = cube;
+			ECS::main.cubes[mapWidth - 2 + midMaxX][-i + midMaxY][mapDepth - 1 + midMaxZ] = cube;
 		}
 
 		player = CreateEntity(0, "Player");
@@ -662,15 +662,16 @@ void ECS::Update(float deltaTime)
 		AnimationComponent* a = (AnimationComponent*)player->componentIDMap[animationComponentID];
 		ECS::main.RegisterComponent(new PlayerAnimationControllerComponent(player, true, a), player);
 		ECS::main.RegisterComponent(new BillboardingComponent(player, true), player);
-		ECS::main.RegisterComponent(new CameraFollowComponent(player, true, glm::vec3(-295.0f, 615.0f, 1760.0f), 350.0f, 10.0f, true, false, false, false), player);
+		ECS::main.RegisterComponent(new CameraFollowComponent(player, true, { -1.0f, 0.0f, 0.0f, 0.0f }, 500.0f, 40.0f, true, false, false, false), player);
 		ECS::main.RegisterComponent(new InputComponent(player, true, true, 0.5f), player);
-		ECS::main.RegisterComponent(new ActorComponent(player, true, 10.0f, Face::top, ECS::main.cubes[mapWidth - 2 + midMaxX][mapHeight - 1 + midMaxY][mapDepth + midMaxZ]), player);
+		ECS::main.RegisterComponent(new ActorComponent(player, true, 10.0f, Face::back, ECS::main.cubes[mapWidth - 1 + midMaxX][mapHeight - 1 + midMaxY][mapDepth - 1 + midMaxZ]), player);
 		ECS::main.RegisterComponent(new MovementComponent(player, true), player);
 
 		PositionActor((ActorComponent*)player->componentIDMap[actorComponentID]);
 
 		glm::vec3 possPos = ECS::main.CubeToWorldSpace(mapWidth - 2 + midMaxX, mapHeight - 1 + midMaxY, mapDepth + midMaxZ);
-		std::cout << "Poss: " + std::to_string(possPos.x) + " / " + std::to_string(possPos.y) + " / " + std::to_string(possPos.z) << std::endl;
+
+		Game::main.cameraPosition += possPos;
 	}
 
 	for (int i = 0; i < componentBlocks.size(); i++)
@@ -859,13 +860,13 @@ InputComponent::InputComponent(Entity* entity, bool active, bool acceptInput, fl
 
 #pragma region Camera Follow Component
 
-CameraFollowComponent::CameraFollowComponent(Entity* entity, bool active, glm::vec3 offset, float distance, float speed, bool track, bool lockX, bool lockY, bool lockZ)
+CameraFollowComponent::CameraFollowComponent(Entity* entity, bool active, Quaternion rotation, float distance, float speed, bool track, bool lockX, bool lockY, bool lockZ)
 {
 	this->ID = cameraFollowComponentID;
 	this->entity = entity;
 	this->active = active;
 
-	this->offset = offset;
+	this->rotation = rotation;
 	this->distance = distance;
 
 	this->resetting = false;
@@ -1144,11 +1145,28 @@ void CameraFollowSystem::Update(int activeScene, float deltaTime)
 			if (c->active && c->entity->GetScene() == activeScene ||
 				c->active && c->entity->GetScene() == 0)
 			{
-				/*PositionComponent* pos = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
+				// We want the camera to move along a sphere around the followed object
+				// maintaining a constant distance from that object.
+				// To do this, we need to have a few things:
+				// - The position of the object.
+				// - The desired point on the sphere as described by a quaternion.
+				// - The distance we want the object to be along that vector.
+				// Thus, what the camera follow component needs isn't an offset in space
+				// but a quaternion defining the desired rotation along that sphere.
 
-				glm::vec3 normalizedOffset = glm::normalize(Util::Rotate(c->offset, Game::main.cameraRotation));
+				PositionComponent* pos = (PositionComponent*)c->entity->componentIDMap[positionComponentID];
+				glm::vec3 position = pos->position;
+				Quaternion rotation = c->rotation;
+				float d = c->distance;
 
-				Game::main.cameraPosition = Util::Lerp(Game::main.cameraPosition, pos->position + (normalizedOffset * c->distance), deltaTime * c->speed);*/
+				glm::vec3 p = glm::normalize(Util::Rotate({ 0.0f, 0.0f, 1.0f }, rotation));
+				glm::vec3 point = position + (p * d);
+				Quaternion cameraRotation = { rotation.w, rotation.x, rotation.y, rotation.z };
+
+				Game::main.cameraPosition = point;
+				Game::main.cameraRotation = cameraRotation;
+				// Game::main.cameraPosition = Util::Lerp(Game::main.cameraPosition, point, deltaTime * c->speed);
+				// Game::main.cameraRotation = Util::Slerp(Game::main.cameraRotation, cameraRotation, deltaTime * c->speed);
 			}
 		}
 	}
@@ -1275,7 +1293,8 @@ void InputSystem::Update(int activeScene, float deltaTime)
 
 			bool resetRotation = ((glfwGetKey(Game::main.window, Game::main.resetRotationKey) == GLFW_PRESS) || (glfwGetMouseButton(Game::main.window, Game::main.resetRotationKey) == GLFW_PRESS));
 
-			glm::vec3 camRot = Util::QuaternionToEuler(Game::main.cameraRotation);
+			// glm::vec3 camRot = Util::QuaternionToEuler(camFollower->rotation);
+			Quaternion camRot = camFollower->rotation;
 
 			float deltaTheta = Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 
@@ -1284,14 +1303,14 @@ void InputSystem::Update(int activeScene, float deltaTime)
 				camFollower->resetting = false;
 				Quaternion locQ = Util::EulerToQuaternion({ deltaTheta, 0.0f, 0.0f });
 				Util::NormalizeQuaternion(locQ);
-				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
+				camRot = locQ * camRot;
 			}
 			else if (unrotX)
 			{
 				camFollower->resetting = false;
 				Quaternion locQ = Util::EulerToQuaternion({ -deltaTheta, 0.0f, 0.0f });
 				Util::NormalizeQuaternion(locQ);
-				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
+				camRot = locQ * camRot;
 			}
 
 			if (rotY)
@@ -1299,14 +1318,14 @@ void InputSystem::Update(int activeScene, float deltaTime)
 				camFollower->resetting = false;
 				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, deltaTheta, 0.0f });
 				Util::NormalizeQuaternion(locQ);
-				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
+				camRot = locQ * camRot;
 			}
 			else if (unrotY)
 			{
 				camFollower->resetting = false;
 				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, -deltaTheta, 0.0f });
 				Util::NormalizeQuaternion(locQ);
-				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
+				camRot = locQ * camRot;
 			}
 
 			if (rotZ)
@@ -1314,23 +1333,28 @@ void InputSystem::Update(int activeScene, float deltaTime)
 				camFollower->resetting = false;
 				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, 0.0f, deltaTheta });
 				Util::NormalizeQuaternion(locQ);
-				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
+				camRot = locQ * camRot;
 			}
 			else if (unrotZ)
 			{
 				camFollower->resetting = false;
 				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, 0.0f, -deltaTheta });
 				Util::NormalizeQuaternion(locQ);
-				Game::main.cameraRotation = locQ * Game::main.cameraRotation;
+				camRot = locQ * camRot;
 			}
 
-			if (zoomIn)
+			if (zoomOut)
 			{
 				Game::main.zoom += Game::main.zoomSpeed * deltaTime;
 			}
-			else if (zoomOut)
+			else if (zoomIn)
 			{
 				Game::main.zoom -= Game::main.zoomSpeed * deltaTime;
+
+				if (Game::main.zoom < 0.001f)
+				{
+					Game::main.zoom = 0.001f;
+				}
 			}
 
 			if (resetRotation || camFollower->resetting)
@@ -1338,16 +1362,18 @@ void InputSystem::Update(int activeScene, float deltaTime)
 				camFollower->resetting = true;
 
 				Quaternion target = Util::EulerToQuaternion(Game::main.baseCameraRotation);
-				Quaternion slerp = Util::Slerp(Game::main.cameraRotation, target, deltaTime * 8.0f);
+				Quaternion slerp = Util::Slerp(camRot, target, deltaTime * 8.0f);
 
 				Game::main.cameraRotation = slerp;
 
-				if (Util::QuaternionDistance(Game::main.cameraRotation, target) < 0.000005f)
+				if (Util::QuaternionDistance(camRot, target) < 0.000005f)
 				{
-					Game::main.cameraRotation = target;
+					camRot = target;
 					camFollower->resetting = false;
 				}
 			}
+
+			camFollower->rotation = camRot;
 
 			if (freeCam)
 			{

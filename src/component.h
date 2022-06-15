@@ -164,7 +164,7 @@ public:
 class CameraFollowComponent : public Component
 {
 public:
-	glm::vec3 offset;
+	Quaternion rotation;
 	float distance;
 
 	float speed;
@@ -175,7 +175,7 @@ public:
 	bool lockY;
 	bool lockZ;
 
-	CameraFollowComponent(Entity* entity, bool active, glm::vec3 offset, float distance, float speed, bool track, bool lockX, bool lockY, bool lockZ);
+	CameraFollowComponent(Entity* entity, bool active, Quaternion rotation, float distance, float speed, bool track, bool lockX, bool lockY, bool lockZ);
 };
 
 class BillboardingComponent : public Component
