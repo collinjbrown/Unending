@@ -19,7 +19,7 @@ Renderer::Renderer(GLuint whiteTexture) : batches(1), shader("assets/shaders/bas
 	glGenBuffers(1, &IBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 
-	glBufferData(GL_ARRAY_BUFFER, Batch::MAX_QUADS * sizeof(Quad), nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, Batch::MAX_TRIS * sizeof(Triangle), nullptr, GL_DYNAMIC_DRAW);
 
 	// Coordinates
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, x));
@@ -37,19 +37,15 @@ Renderer::Renderer(GLuint whiteTexture) : batches(1), shader("assets/shaders/bas
 	glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texture));
 	glEnableVertexAttribArray(3);
 
-	unsigned int indices[Batch::MAX_QUADS * 6];
-	for (int i = 0; i < Batch::MAX_QUADS; i++)
+	unsigned int indices[Batch::MAX_TRIS * 3];
+	for (int i = 0; i < Batch::MAX_TRIS; i++)
 	{
-		const int rightOffset = 4 * i;
-		const int leftOffset = 6 * i;
+		const int rightOffset = 3 * i;
+		const int leftOffset = 3 * i;
 
 		indices[leftOffset + 0] = rightOffset + 0;
 		indices[leftOffset + 1] = rightOffset + 1;
-		indices[leftOffset + 2] = rightOffset + 3;
-
-		indices[leftOffset + 3] = rightOffset + 1;
-		indices[leftOffset + 4] = rightOffset + 2;
-		indices[leftOffset + 5] = rightOffset + 3;
+		indices[leftOffset + 2] = rightOffset + 2;
 	}
 
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -92,7 +88,7 @@ Bundle Renderer::DetermineBatch(int textureID)
 
 	int currentBatch = floor(texturesUsed.size() / MAX_TEXTURES_PER_BATCH);
 
-	if (location != -1 && batches[textureBatch].index < Batch::MAX_QUADS)
+	if (location != -1 && batches[textureBatch].index + 2 < Batch::MAX_TRIS)
 	{
 		return { textureBatch, (float)(static_cast<int>(location - 1) % MAX_TEXTURES_PER_BATCH) };
 	}
@@ -128,55 +124,92 @@ void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm
 	// Front	- All the close verts.
 	Quad front
 	{
-		{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.25,	(float)textureID },
-		{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.0,	0.25,	(float)textureID },
-		{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.0,	0.5,	(float)textureID },
-		{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.5,	(float)textureID }
+		{
+			{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.5,	(float)textureID },
+			{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.0,	0.5,	(float)textureID },
+			{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.0,	0.25,	(float)textureID },
+		},
+		{
+			{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.25,	(float)textureID },
+			{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.5,	(float)textureID },
+			{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.0,	0.25,	(float)textureID },
+		}
 	};
 
 	// Back		- All the far verts.
 	Quad back
 	{
-		{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.25,	(float)textureID },
-		{ farBottomLeft.x,		farBottomLeft.y,	farBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.25,	(float)textureID },
-		{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.5,	(float)textureID },
-		{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.5,	(float)textureID }
+		{
+			{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.5,	(float)textureID },
+			{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.5,	(float)textureID },
+			{ farBottomLeft.x,		farBottomLeft.y,	farBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.25,	(float)textureID },
+
+		},
+		{
+			{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.25,	(float)textureID },
+			{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.5,	(float)textureID },
+			{ farBottomLeft.x,		farBottomLeft.y,	farBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.25,	(float)textureID },
+		}
 	};
 
 	// Right		- Close left, top and bottom, and far left, top and bottom.		- The far verts will be treated as the quad's left, top and bottom.
 	Quad right
 	{
-		{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.5,	(float)textureID },
-		{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.75,	(float)textureID },
-		{ farBottomLeft.x,		farBottomLeft.y,	farBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.5,	0.75,	(float)textureID },
-		{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.5,	(float)textureID }
+		{
+			{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.5,	(float)textureID },
+			{ farBottomLeft.x,		farBottomLeft.y,	farBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.5,	0.75,	(float)textureID },
+			{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.75,	(float)textureID },
+		},
+		{
+			{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.5,	(float)textureID },
+			{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.5,	(float)textureID },
+			{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.75,	(float)textureID },
+		}
 	};
 
 	// Left	- Close right, top and bottom, and far right, top and bottom.	- The close verts will be treated as the quad's left, top and bottom.
 	Quad left
 	{
-		{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.25,	(float)textureID },
-		{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.0,	(float)textureID },
-		{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.5,	0.0,	(float)textureID },
-		{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.25,	(float)textureID }
+		{
+			{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.25,	(float)textureID },
+			{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.0,	(float)textureID },
+			{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.5,	0.0,	(float)textureID },
+		},
+		{
+			{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.25,	(float)textureID },
+			{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.25,	0.25,	(float)textureID },
+			{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	0.5,	0.0,	(float)textureID },
+		}
 	};
 
 	// Top		- Close top, left and right, and far top, left and right.		- The left verts, far and close, will be treated as the quad's left, top and bottom.
 	Quad top
 	{
-		{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.5,	(float)textureID },
-		{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.5,	0.25,	(float)textureID },
-		{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.25,	(float)textureID },
-		{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.5,	(float)textureID }
+		{
+			{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.5,	(float)textureID },
+			{ closeTopLeft.x,		closeTopLeft.y,		closeTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.25,	(float)textureID },
+			{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.5,	0.25,	(float)textureID },
+		},
+		{
+			{ farTopLeft.x,			farTopLeft.y,		farTopLeft.z,		color.r,	color.g,	color.b,	color.a,	0.25,	0.5,	(float)textureID },
+			{ farTopRight.x,		farTopRight.y,		farTopRight.z,		color.r,	color.g,	color.b,	color.a,	0.5,	0.5,	(float)textureID },
+			{ closeTopRight.x,		closeTopRight.y,	closeTopRight.z,	color.r,	color.g,	color.b,	color.a,	0.5,	0.25,	(float)textureID },
+		}
 	};
 
 	// Bottom		- Close bottom, left and right, and far bottom, left and right.	- The right verts, far and close, will be treated as the quad's left, top and bottom.
 	Quad bottom
 	{
-		{ farBottomLeft.x,		farBottomLeft.y,	farBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.25,	(float)textureID },
-		{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.5,	(float)textureID },
-		{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	1.0,	0.5,	(float)textureID },
-		{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	1.0,	0.25,	(float)textureID }
+		{
+			{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.5,	(float)textureID },
+			{ farBottomLeft.x,		farBottomLeft.y,	farBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.25,	(float)textureID },
+			{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	1.0,	0.25,	(float)textureID },
+		},
+		{
+			{ closeBottomLeft.x,	closeBottomLeft.y,	closeBottomLeft.z,	color.r,	color.g,	color.b,	color.a,	0.75,	0.5,	(float)textureID },
+			{ closeBottomRight.x,	closeBottomRight.y,	closeBottomRight.z,	color.r,	color.g,	color.b,	color.a,	1.0,	0.5,	(float)textureID },
+			{ farBottomRight.x,		farBottomRight.y,	farBottomRight.z,	color.r,	color.g,	color.b,	color.a,	1.0,	0.25,	(float)textureID },
+		}
 	};
 
 	if (f > minDiff) PrepareQuad(front,		textureID);
@@ -198,14 +231,19 @@ void Renderer::PrepareQuad(Quad& input, int textureID)
 {
 	Bundle bundle = DetermineBatch(textureID);
 	Batch& batch = batches[bundle.batch];
-	Quad& quad = batch.buffer[batch.index];
 
-	input.topRight.texture		= bundle.location;
-	input.bottomRight.texture	= bundle.location;
-	input.bottomLeft.texture	= bundle.location;
-	input.topLeft.texture		= bundle.location;
+	// Triangle& t1 = batch.buffer[batch.index];
+	input.left.topLeft.texture = bundle.location;
+	input.left.bottomLeft.texture = bundle.location;
+	input.left.bottomRight.texture = bundle.location;
+	batch.buffer[batch.index] = input.left;
+	batch.index++;
 
-	batch.buffer[batch.index] = input;
+	// Triangle& t2 = batch.buffer[batch.index];
+	input.right.topLeft.texture = bundle.location;
+	input.right.bottomLeft.texture = bundle.location;
+	input.right.bottomRight.texture = bundle.location;
+	batch.buffer[batch.index] = input.right;
 	batch.index++;
 }
 
@@ -248,11 +286,24 @@ void Renderer::PrepareQuad(glm::vec2 size, glm::vec3 position, Quaternion q, glm
 		uvY1 = tempY0;
 	}
 
+	Vertex tR = { topRight.x,			topRight.y,			topRight.z,		color.r,	color.g,	color.b,	color.a,	uvX0,	uvY0,	0 };
+	Vertex bR = { bottomRight.x,		bottomRight.y,		bottomRight.z,	color.r,	color.g,	color.b,	color.a,	uvX0,	uvY1,	0 };
+	Vertex bL = { bottomLeft.x,		bottomLeft.y,		bottomLeft.z,	color.r,	color.g,	color.b,	color.a,	uvX1,	uvY1,	0 };
+	Vertex tL = { topLeft.x,			topLeft.y,			topLeft.z,		color.r,	color.g,	color.b,	color.a,	uvX1,	uvY0,	0 };
+
 	Quad quad;
-	quad.topRight		= {	topRight.x,			topRight.y,			topRight.z,		color.r,	color.g,	color.b,	color.a,	uvX0,	uvY0,	0 };
-	quad.bottomRight	= { bottomRight.x,		bottomRight.y,		bottomRight.z,	color.r,	color.g,	color.b,	color.a,	uvX0,	uvY1,	0 };
-	quad.bottomLeft		= { bottomLeft.x,		bottomLeft.y,		bottomLeft.z,	color.r,	color.g,	color.b,	color.a,	uvX1,	uvY1,	0 };
-	quad.topLeft		= { topLeft.x,			topLeft.y,			topLeft.z,		color.r,	color.g,	color.b,	color.a,	uvX1,	uvY0,	0 };
+	quad.left =
+	{
+		tR,
+		bR,
+		bL
+	};
+	quad.right =
+	{
+		bR,
+		tL,
+		tR
+	};
 
 	PrepareQuad(quad, animationID);
 }
@@ -289,8 +340,8 @@ void Renderer::Flush(const Batch& batch)
 {
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, batch.index * sizeof(Quad), &batch.buffer[0]);
-	glDrawElements(GL_TRIANGLES, batch.index * 6, GL_UNSIGNED_INT, nullptr);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, batch.index * sizeof(Triangle), &batch.buffer[0]);
+	glDrawElements(GL_TRIANGLES, batch.index * 3, GL_UNSIGNED_INT, nullptr);
 }
 
 void Renderer::ResetBuffers()

@@ -29,19 +29,24 @@ struct Vertex
 	float texture;
 };
 
-struct Quad
+struct Triangle
 {
-	Vertex topRight;
+	Vertex topLeft;
 	Vertex bottomRight;
 	Vertex bottomLeft;
-	Vertex topLeft;
+};
+
+struct Quad
+{
+	Triangle left;
+	Triangle right;
 };
 
 struct Batch
 {
-	static constexpr int MAX_QUADS = 10000;
+	static constexpr int MAX_TRIS = 20000;
 
-	std::array<Quad, MAX_QUADS> buffer;
+	std::array<Triangle, MAX_TRIS> buffer;
 	int index = 0;
 };
 
