@@ -21,13 +21,14 @@ public:
 	
 	static glm::vec3 Lerp(glm::vec3 a, glm::vec3 b, float step);
 
-	static Face GetAbsoluteFace(Face relativeUp, Face pseudoForward);
 	static glm::vec3 GetRelativeUp(Face face);
+	static Quaternion GetFaceRotation(Face face);
 	static glm::vec3 GetForward(Face up, Face right, bool corner);
+
+	static Face GetAbsoluteFace(Face relativeUp, Face pseudoForward);
 	static glm::vec3 GetLandingCoords(Face fulcrum, Face rollDirection);
 
 	static Face OppositeFace(Face face);
-	static glm::vec3 GetFaceRotation(Face face);
 	static Face GetFaceFromDifference(glm::vec3 difference);
 	static Quaternion GetRollRotation(Face activeFace, Face rollDirection, Quaternion baseQuaternion, int turns);
 };

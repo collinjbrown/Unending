@@ -33,7 +33,13 @@ void ECS::PositionActor(ActorComponent* actor)
 	PositionComponent* pos = (PositionComponent*)actor->entity->componentIDMap[positionComponentID];
 	CubeComponent* cube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
 	
-	pos->position = CubeToWorldSpace(cube->x, cube->y, cube->z) + ((Util::GetRelativeUp(actor->face) * (cubeSize / 2.0f)));
+	Quaternion r = Util::GetFaceRotation(actor->face);
+	Util::NormalizeQuaternion(r);
+	pos->position = CubeToWorldSpace(cube->x, cube->y, cube->z) + Util::Rotate(glm::vec3(0.0f, (float)cubeSize, 0.0f), r);
+
+	/*glm::vec3 rotation = Util::GetRelativeUp(actor->face);
+	actor->baseQuaternion = { 0.0f, rotation.x, rotation.y, rotation.z };
+	Util::NormalizeQuaternion(actor->baseQuaternion);*/
 }
 
 void ECS::MoveCube(CubeComponent* cube, int x, int y, int z)
@@ -246,9 +252,9 @@ std::vector<CubeComponent*> ECS::DetermineStructure(CubeComponent* cube, CubeCom
 		CubeComponent* c = retCubes[i];
 		if (c != cube)
 		{
-			int diffX = cube->x - c->x;
-			int diffY = cube->y - c->y;
-			int diffZ = cube->z - c->z;
+			int diffX = c->x - cube->x;
+			int diffY = c->y - cube->y;
+			int diffZ = c->z - cube->z;
 
 			if (diffX == 1 && diffY == 0 && diffZ == 0) tr = true;
 			else if (diffX == -1 && diffY == 0 && diffZ == 0) tl = true;
@@ -266,12 +272,19 @@ std::vector<CubeComponent*> ECS::DetermineStructure(CubeComponent* cube, CubeCom
 		}
 	}
 
-	if (tf && direction == Face::front ||
-		tb && direction == Face::back ||
-		tr && direction == Face::right ||
-		tl && direction == Face::left ||
-		tu && direction == Face::top ||
-		td && direction == Face::bottom)
+	/*for (int i = 0; i < retCubes.size(); i++)
+	{
+		retCubes[i]->active = false;
+	}*/
+
+	// std::cout << std::to_string((int)direction) << std::endl;
+
+	if (tf && direction == Face::back ||
+		tb && direction == Face::front ||
+		tr && direction == Face::left ||
+		tl && direction == Face::right ||
+		tu && direction == Face::bottom ||
+		td && direction == Face::top)
 	{
 		retCubes.clear();
 		return retCubes;
@@ -371,6 +384,8 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 		}
 	}
 
+	std::cout << std::to_string(minT) << std::endl;
+	if (minT == 0.0f) return;
 	// Now we need to figure out how the cube is gonna roll.
 	Quaternion newRotation = Util::GetRollRotation(landingFace, roll, pos->quaternion, std::max(2, (int)(2 * (minT))));
 
@@ -404,10 +419,10 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 	MoveCube(activeCube, landingCubePosition.x, landingCubePosition.y, landingCubePosition.z);
 
 	// Oh, and we roll the actor onto the right face.
-	// RollActor(actor, standingFace);
+	RollActor(actor, standingFace);
 	/*actor->face = standingFace;
 	PositionActor(actor);*/
-	actor->face = landingFace;
+	// actor->face = landingFace;
 
 	// But we can't forget that this might involve a larger structure of cubes.
 	// This is where things get a little complicated.
@@ -557,6 +572,7 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 		}
 	}
 
+	if (minT == 0.0f) return;
 	// Now we need to figure out how the cube is gonna roll.
 	Quaternion newRotation = Util::GetRollRotation(oppFulcrum, roll, pos->quaternion, std::max(2, (int)(2 * (minT))));
 	Quaternion newRotation2 = Util::GetRollRotation(oppFulcrum, roll, newRotation, std::max(2, (int)(2 * (minT))));
@@ -579,10 +595,10 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 	MoveCube(activeCube, landingCubePosition.x, landingCubePosition.y, landingCubePosition.z);
 
 	// Oh, and we roll the actor onto the right face.
-	// RollActor(actor, standingFace);
+	RollActor(actor, standingFace);
 	/*actor->face = standingFace;
 	PositionActor(actor);*/
-	actor->face = landingFace;
+	// actor->face = landingFace;
 
 	// But we can't forget that this might involve a larger structure of cubes.
 	// This is where things get a little complicated.
@@ -678,7 +694,7 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 		glm::vec3 rollUp = Util::GetRelativeUp(roll);
 		Entity* possibleBlockerEntity = GetCube(activeCube->x + rollUp.x, activeCube->y + rollUp.y, activeCube->z + rollUp.z);
 
-		bool blocked = false;
+		/*bool blocked = false;
 
 		if (possibleBlockerEntity != nullptr && affectedCubes.size() > 1)
 		{
@@ -690,9 +706,9 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 			{
 				blocked = true;
 			}
-		}
+		}*/
 
-		if (blocked) return;
+		if (possibleBlockerEntity != nullptr) return;
 
 		// Now, we have the "real" direction we're going to be rolling.
 		// We want to figure out where we're going to land.
@@ -819,7 +835,7 @@ void ECS::Init()
 	componentBlocks.push_back(new ComponentBlock(new AnimationSystem(), animationComponentID));
 	componentBlocks.push_back(new ComponentBlock(new BillboardingSystem(), billboardingComponentID));
 	componentBlocks.push_back(new ComponentBlock(new CameraFollowSystem(), cameraFollowComponentID));
-	componentBlocks.push_back(new ComponentBlock(new TurnSystem(), actorComponentID));
+	// componentBlocks.push_back(new ComponentBlock(new TurnSystem(), actorComponentID));
 }
 
 void ECS::Update(float deltaTime)
@@ -897,7 +913,7 @@ void ECS::Update(float deltaTime)
 		Animation* testIdle = Game::main.animationMap["testIdle"];
 
 		ECS::main.RegisterComponent(new PositionComponent(player, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), player);
-		ECS::main.RegisterComponent(new AnimationComponent(player, true, glm::vec3(0.0f, (testIdle->height / testIdle->rows) * 0.5f * 0.4f, 0.0f), testIdle, "idle", 0.2f, 0.2f, false, false, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)), player);
+		ECS::main.RegisterComponent(new AnimationComponent(player, true, glm::vec3(0.0f, 0.0f, 0.0f), testIdle, "idle", 0.2f, 0.2f, false, false, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)), player);
 		AnimationComponent* a = (AnimationComponent*)player->componentIDMap[animationComponentID];
 		ECS::main.RegisterComponent(new PlayerAnimationControllerComponent(player, true, a), player);
 		ECS::main.RegisterComponent(new BillboardingComponent(player, true), player);
@@ -1352,7 +1368,8 @@ void AnimationSystem::Update(int activeScene, float deltaTime)
 
 			PositionComponent* pos = (PositionComponent*)a->entity->componentIDMap[positionComponentID];
 			
-			Game::main.renderer->PrepareQuad(glm::vec2(activeAnimation->width * a->scaleX, activeAnimation->height * a->scaleY), a->offset + pos->position, pos->quaternion, a->color, activeAnimation->ID, cellX, cellY, activeAnimation->columns, activeAnimation->rows, a->flippedX, a->flippedY);
+			glm::vec3 truePos = pos->position + Util::Rotate(a->offset, pos->quaternion);
+			Game::main.renderer->PrepareQuad(glm::vec2(activeAnimation->width * a->scaleX, activeAnimation->height * a->scaleY), truePos, pos->quaternion, a->color, activeAnimation->ID, cellX, cellY, activeAnimation->columns, activeAnimation->rows, a->flippedX, a->flippedY);
 		}
 	}
 }
@@ -1740,8 +1757,17 @@ void BillboardingSystem::Update(int activeScene, float deltaTime)
 		if (board->active && board->entity->GetScene() == activeScene ||
 			board->active && board->entity->GetScene() == 0)
 		{
-			PositionComponent* pos = (PositionComponent*)board->entity->componentIDMap[positionComponentID];
-			pos->quaternion = Game::main.cameraRotation;
+			/*PositionComponent* pos = (PositionComponent*)board->entity->componentIDMap[positionComponentID];
+			ActorComponent* actor = (ActorComponent*)board->entity->componentIDMap[actorComponentID];
+
+			glm::vec3 relUp = Util::GetRelativeUp(actor->face);
+			Quaternion rotation = Game::main.cameraRotation;
+
+			rotation = Util::EulerToQuaternion(relUp);
+
+			Util::NormalizeQuaternion(rotation);
+
+			pos->quaternion = rotation;*/
 		}
 	}
 }

@@ -167,6 +167,16 @@ Face Util::GetAbsoluteFace(Face relativeUp, Face pseudoForward)
 	}
 }
 
+Quaternion Util::GetFaceRotation(Face face)
+{
+	if (face == Face::top) return { 1.0f, 0.0f, 0.0f, 0.0f };
+	if (face == Face::bottom) return { 0.0f, 0.0f, -1.0f, 0.0f };
+	if (face == Face::right) return { 0.0f, 1.0f, 0.0f, 0.0f };
+	if (face == Face::left) return { 0.0f, -1.0f, 0.0f, 0.0f };
+	if (face == Face::back) return { 0.0f, 0.0f, 0.0f, 1.0f };
+	if (face == Face::front) return { 0.0f, 0.0f, 0.0f, -1.0f };
+}
+
 glm::vec3 Util::GetRelativeUp(Face face)
 {
 	glm::vec3 relativeUp = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -189,18 +199,6 @@ Face Util::OppositeFace(Face face)
 	if (face == Face::bottom) return Face::top;
 	if (face == Face::left) return Face::right;
 	if (face == Face::right) return Face::left;
-}
-
-glm::vec3 Util::GetFaceRotation(Face face)
-{
-	float rn = 1.5708f;
-
-	if (face == Face::top) return		{	0.0f,	0.0f,		0.0f	};
-	if (face == Face::bottom) return	{	0.0f,	-rn * 2.0f,	0.0f	};
-	if (face == Face::front) return		{	-rn,	0.0f,		0.0f	};
-	if (face == Face::back) return		{	rn,		0.0f,		0.0f	};
-	if (face == Face::right) return		{	0.0f,	0.0f,		rn		};
-	if (face == Face::left) return		{	0.0f,	0.0f,		-rn		};
 }
 
 Face Util::GetFaceFromDifference(glm::vec3 difference)
