@@ -169,7 +169,7 @@ Face Util::GetAbsoluteFace(Face relativeUp, Face pseudoForward)
 
 Quaternion Util::GetFaceRotation(Face face)
 {
-	if (face == Face::top) return { 1.0f, 0.0f, 0.0f, 0.0f };
+	if (face == Face::top) return { 0.0f, 0.0f, 1.0f, 0.0f };
 	if (face == Face::bottom) return { 0.0f, 0.0f, -1.0f, 0.0f };
 	if (face == Face::right) return { 0.0f, 1.0f, 0.0f, 0.0f };
 	if (face == Face::left) return { 0.0f, -1.0f, 0.0f, 0.0f };

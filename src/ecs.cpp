@@ -35,7 +35,8 @@ void ECS::PositionActor(ActorComponent* actor)
 	
 	Quaternion r = Util::GetFaceRotation(actor->face);
 	Util::NormalizeQuaternion(r);
-	pos->position = CubeToWorldSpace(cube->x, cube->y, cube->z) + Util::Rotate(glm::vec3(0.0f, (float)cubeSize, 0.0f), r);
+	pos->position = CubeToWorldSpace(cube->x, cube->y, cube->z) + Util::Rotate(glm::vec3(0.0f, (float)cubeSize / 2.0f, 0.0f), r);
+	pos->quaternion = r;
 
 	/*glm::vec3 rotation = Util::GetRelativeUp(actor->face);
 	actor->baseQuaternion = { 0.0f, rotation.x, rotation.y, rotation.z };
@@ -272,13 +273,6 @@ std::vector<CubeComponent*> ECS::DetermineStructure(CubeComponent* cube, CubeCom
 		}
 	}
 
-	/*for (int i = 0; i < retCubes.size(); i++)
-	{
-		retCubes[i]->active = false;
-	}*/
-
-	// std::cout << std::to_string((int)direction) << std::endl;
-
 	if (tf && direction == Face::back ||
 		tb && direction == Face::front ||
 		tr && direction == Face::left ||
@@ -384,7 +378,6 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 		}
 	}
 
-	std::cout << std::to_string(minT) << std::endl;
 	if (minT == 0.0f) return;
 	// Now we need to figure out how the cube is gonna roll.
 	Quaternion newRotation = Util::GetRollRotation(landingFace, roll, pos->quaternion, std::max(2, (int)(2 * (minT))));
@@ -1368,8 +1361,8 @@ void AnimationSystem::Update(int activeScene, float deltaTime)
 
 			PositionComponent* pos = (PositionComponent*)a->entity->componentIDMap[positionComponentID];
 			
-			glm::vec3 truePos = pos->position + Util::Rotate(a->offset, pos->quaternion);
-			Game::main.renderer->PrepareQuad(glm::vec2(activeAnimation->width * a->scaleX, activeAnimation->height * a->scaleY), truePos, pos->quaternion, a->color, activeAnimation->ID, cellX, cellY, activeAnimation->columns, activeAnimation->rows, a->flippedX, a->flippedY);
+			// glm::vec3 truePos = pos->position + Util::Rotate(a->offset, pos->quaternion);
+			Game::main.renderer->PrepareQuad(glm::vec2(activeAnimation->width * a->scaleX, activeAnimation->height * a->scaleY), pos->position, pos->quaternion, a->color, activeAnimation->ID, cellX, cellY, activeAnimation->columns, activeAnimation->rows, a->flippedX, a->flippedY);
 		}
 	}
 }
