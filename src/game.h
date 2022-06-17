@@ -6,7 +6,6 @@
 #include <map>
 #include <string>
 
-#include "component.h"
 #include "renderer.h"
 
 enum class ProjectionType { perspective, orthographic };
@@ -23,8 +22,13 @@ public:
 	std::map<std::string, Texture*> textureMap;
 	std::map<std::string, Animation*> animationMap;
 
+	float pixelation = 1.0f;
+
 	int windowWidth = 1280;
 	int windowHeight = 720;
+
+	Face face = Face::top;
+	Corner corner = Corner::bottom;
 
 	glm::vec2 mousePosition = glm::vec2(0.0f, 0.0f);
 	glm::vec3 cameraPosition = glm::vec3(900.0f, 500.0f, 300.0f);

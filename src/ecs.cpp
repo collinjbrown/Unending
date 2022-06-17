@@ -2,13 +2,11 @@
 
 #include <algorithm>
 #include <iostream>
+#include <glm/gtx/norm.hpp>
 
 #include "game.h"
 #include "system.h"
-#include "component.h"
 #include "entity.h"
-#include "util.h"
-#include <glm/gtx/norm.hpp>
 
 #pragma region Map
 
@@ -685,7 +683,7 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 		// If another cube is blocking it, the whole roll should be stopped.
 		// Let's check that. We don't need any fancy function for this, just:
 		glm::vec3 rollUp = Util::GetRelativeUp(roll);
-		Entity* possibleBlockerEntity = GetCube(activeCube->x + rollUp.x, activeCube->y + rollUp.y, activeCube->z + rollUp.z);
+		Entity* possibleBlockerEntity = GetCube(activeCube->x + (int)rollUp.x, activeCube->y + (int)rollUp.y, activeCube->z + (int)rollUp.z);
 
 		/*bool blocked = false;
 
@@ -824,6 +822,7 @@ void ECS::Init()
 	componentBlocks.push_back(new ComponentBlock(new InputSystem(), inputComponentID));
 	componentBlocks.push_back(new ComponentBlock(new MovementSystem(), movementComponentID));
 	componentBlocks.push_back(new ComponentBlock(new CubeSystem(), cubeComponentID));
+	// componentBlocks.push_back(new ComponentBlock(new ModelSystem(), modelComponentID));
 	componentBlocks.push_back(new ComponentBlock(new AnimationControllerSystem(), animationControllerComponentID));
 	componentBlocks.push_back(new ComponentBlock(new AnimationSystem(), animationComponentID));
 	componentBlocks.push_back(new ComponentBlock(new BillboardingSystem(), billboardingComponentID));
@@ -841,9 +840,9 @@ void ECS::Update(float deltaTime)
 	if (round == 1)
 	{
 		float cubeSize = (float)this->cubeSize;
-		int mapWidth = 5;
-		int mapHeight = 5;
-		int mapDepth = 5;
+		int mapWidth = 2;
+		int mapHeight = 2;
+		int mapDepth = 2;
 
 		int midMaxX = (ECS::main.maxWidth / 2) - (mapWidth / 2);
 		int midMaxY = (ECS::main.maxHeight / 2) - (mapHeight / 2);
@@ -906,12 +905,13 @@ void ECS::Update(float deltaTime)
 		Animation* testIdle = Game::main.animationMap["testIdle"];
 
 		ECS::main.RegisterComponent(new PositionComponent(player, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), player);
+		// ECS::main.RegisterComponent(new ModelComponent(player, true, Game::main.modelMap["walker"]), player);
 		ECS::main.RegisterComponent(new AnimationComponent(player, true, glm::vec3(0.0f, 0.0f, 0.0f), testIdle, "idle", 0.2f, 0.2f, false, false, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)), player);
 		AnimationComponent* a = (AnimationComponent*)player->componentIDMap[animationComponentID];
 		ECS::main.RegisterComponent(new PlayerAnimationControllerComponent(player, true, a), player);
 		ECS::main.RegisterComponent(new BillboardingComponent(player, true), player);
 		ECS::main.RegisterComponent(new CameraFollowComponent(player, true, { -1.0f, 0.0f, 0.0f, 0.0f }, 500.0f, 40.0f, true, false, false, false), player);
-		ECS::main.RegisterComponent(new InputComponent(player, true, true, 0.5f), player);
+		ECS::main.RegisterComponent(new InputComponent(player, true, true, 0.5f, 0.5f), player);
 		ECS::main.RegisterComponent(new ActorComponent(player, true, 10.0f, Face::back, ECS::main.cubes[(mapWidth / 2) + midMaxX][midMaxY - 1][mapDepth - 1 + midMaxZ]), player);
 		ECS::main.RegisterComponent(new MovementComponent(player, true), player);
 
@@ -942,7 +942,7 @@ void ECS::PurgeDeadEntities()
 {
 	if (dyingEntities.size() > 0)
 	{
-		int n = dyingEntities.size();
+		size_t n = dyingEntities.size();
 
 		for (int i = 0; i < n; i++)
 		{
@@ -1093,15 +1093,19 @@ PlayerAnimationControllerComponent::PlayerAnimationControllerComponent(Entity* e
 
 #pragma region Input Component
 
-InputComponent::InputComponent(Entity* entity, bool active, bool acceptInput, float rollDelay)
+InputComponent::InputComponent(Entity* entity, bool active, bool acceptInput, float rollDelay, float turnDelay)
 {
 	this->ID = inputComponentID;
 	this->entity = entity;
 	this->active = active;
 
 	this->acceptInput = acceptInput;
+
 	this->rollDelay = rollDelay;
 	this->lastRoll = 0.0f;
+
+	this->turnDelay = turnDelay;
+	this->lastTurn = 0.0f;
 }
 
 #pragma endregion
@@ -1166,7 +1170,7 @@ ActorComponent::ActorComponent(Entity * entity, bool active, float speed, Face f
 
 #pragma endregion
 
-#pragma region
+#pragma region Movement Component
 
 MovementComponent::MovementComponent(Entity* entity, bool active)
 {
@@ -1227,6 +1231,8 @@ void MovementComponent::RegisterMovement(float speed, BezierQuaternion curve, fl
 	m->targetT = targetT;
 	this->queue.push_back(m);
 }
+
+#pragma endregion
 
 #pragma endregion
 
@@ -1454,10 +1460,9 @@ void CameraFollowSystem::Update(int activeScene, float deltaTime)
 
 				glm::vec3 p = glm::normalize(Util::Rotate({ 0.0f, 0.0f, 1.0f }, rotation));
 				glm::vec3 point = position + (p * d);
-				Quaternion cameraRotation = { rotation.w, rotation.x, rotation.y, rotation.z };
 
 				Game::main.cameraPosition = point;
-				Game::main.cameraRotation = cameraRotation;
+				Game::main.cameraRotation = rotation;
 			}
 		}
 	}
@@ -1519,22 +1524,22 @@ void InputSystem::Update(int activeScene, float deltaTime)
 			if (!cubeControl && moveForward && !mover->moving && !cube->moving)
 			{
 				movement = Util::GetRelativeUp(Util::GetAbsoluteFace(actor->face, Face::back));
-				ECS::main.MoveActor(actor, movement.x, movement.y, movement.z);
+				ECS::main.MoveActor(actor, (int)movement.x, (int)movement.y, (int)movement.z);
 			}
 			else if (!cubeControl && moveBack && !mover->moving && !cube->moving)
 			{
 				movement = Util::GetRelativeUp(Util::GetAbsoluteFace(actor->face, Face::front));
-				ECS::main.MoveActor(actor, movement.x, movement.y, movement.z);
+				ECS::main.MoveActor(actor, (int)movement.x, (int)movement.y, (int)movement.z);
 			}
 			else if (!cubeControl && moveRight && !mover->moving && !cube->moving)
 			{
 				movement = Util::GetRelativeUp(Util::GetAbsoluteFace(actor->face, Face::right));
-				ECS::main.MoveActor(actor, movement.x, movement.y, movement.z);
+				ECS::main.MoveActor(actor, (int)movement.x, (int)movement.y, (int)movement.z);
 			}
 			else if (!cubeControl && moveLeft && !mover->moving && !cube->moving)
 			{
 				movement = Util::GetRelativeUp(Util::GetAbsoluteFace(actor->face, Face::left));
-				ECS::main.MoveActor(actor, movement.x, movement.y, movement.z);
+				ECS::main.MoveActor(actor, (int)movement.x, (int)movement.y, (int)movement.z);
 			}
 
 			// Cube Controlling
@@ -1589,49 +1594,71 @@ void InputSystem::Update(int activeScene, float deltaTime)
 
 			float deltaTheta = Game::main.rotationSpeed * deltaTime * (1 / Game::main.zoom);
 
-			if (rotX)
+			bool canTurn = (input->lastTurn > input->turnDelay);
+			input->lastTurn += deltaTime;
+
+			if (rotX && canTurn)
 			{
 				camFollower->resetting = false;
-				Quaternion locQ = Util::EulerToQuaternion({ deltaTheta, 0.0f, 0.0f });
+				input->lastTurn = 0.0f;
+				/*Quaternion locQ = Util::EulerToQuaternion({ deltaTheta, 0.0f, 0.0f });
 				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;
+				camRot = locQ * camRot;*/
+
+				// Game::main.corner = (Corner)(abs(((int)Game::main.corner + 1 % 4)));
+				Game::main.face = Util::GetFaceChangeHorizontal(Game::main.face, Game::main.corner, 1.0f);
 			}
-			else if (unrotX)
+			else if (unrotX && canTurn)
 			{
 				camFollower->resetting = false;
-				Quaternion locQ = Util::EulerToQuaternion({ -deltaTheta, 0.0f, 0.0f });
+				input->lastTurn = 0.0f;
+				/*Quaternion locQ = Util::EulerToQuaternion({ -deltaTheta, 0.0f, 0.0f });
 				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;
+				camRot = locQ * camRot;*/
+
+				// Game::main.corner = (Corner)(abs(((int)Game::main.corner - 1 % 4)));
+				Game::main.face = Util::GetFaceChangeHorizontal(Game::main.face, Game::main.corner, -1.0f);
 			}
 
-			if (rotY)
+			if (rotY && canTurn)
 			{
 				camFollower->resetting = false;
-				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, deltaTheta, 0.0f });
+				input->lastTurn = 0.0f;
+				/*Quaternion locQ = Util::EulerToQuaternion({ 0.0f, deltaTheta, 0.0f });
 				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;
+				camRot = locQ * camRot;*/
+
+				Game::main.corner = (Corner)(((int)Game::main.corner + 1) % 4);
 			}
-			else if (unrotY)
+			else if (unrotY && canTurn)
 			{
 				camFollower->resetting = false;
-				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, -deltaTheta, 0.0f });
+				input->lastTurn = 0.0f;
+				/*Quaternion locQ = Util::EulerToQuaternion({ 0.0f, -deltaTheta, 0.0f });
 				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;
+				camRot = locQ * camRot;*/
+
+				int c = (int)(Game::main.corner) - 1;
+				if (c < 0) c = 3;
+
+				Game::main.corner = (Corner)(c);
 			}
 
 			if (rotZ)
 			{
 				camFollower->resetting = false;
-				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, 0.0f, deltaTheta });
+				input->lastTurn = 0.0f;
+				/*Quaternion locQ = Util::EulerToQuaternion({ 0.0f, 0.0f, deltaTheta });
 				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;
+				camRot = locQ * camRot;*/
 			}
 			else if (unrotZ)
 			{
 				camFollower->resetting = false;
-				Quaternion locQ = Util::EulerToQuaternion({ 0.0f, 0.0f, -deltaTheta });
+				input->lastTurn = 0.0f;
+				/*Quaternion locQ = Util::EulerToQuaternion({ 0.0f, 0.0f, -deltaTheta });
 				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;
+				camRot = locQ * camRot;*/
 			}
 
 			if (zoomOut)
@@ -1647,6 +1674,8 @@ void InputSystem::Update(int activeScene, float deltaTime)
 					Game::main.zoom = 0.001f;
 				}
 			}
+
+			camFollower->rotation = Util::Slerp(camFollower->rotation, Util::GetCameraOrientation(Game::main.face, Game::main.corner), deltaTime * 8.0f);
 
 			if (resetRotation || camFollower->resetting)
 			{
@@ -1664,7 +1693,7 @@ void InputSystem::Update(int activeScene, float deltaTime)
 				}
 			}
 
-			camFollower->rotation = camRot;
+			// camFollower->rotation = camRot;
 
 			if (freeCam)
 			{

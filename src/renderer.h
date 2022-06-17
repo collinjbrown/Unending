@@ -9,8 +9,6 @@
 
 #include "component.h"
 #include "shader.h"
-#include "texture.h"
-#include "animation.h"
 
 struct Vertex
 {

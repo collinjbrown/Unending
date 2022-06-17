@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <map>
-#include <glm/glm.hpp>
 
 #include "util.h"
 #include "texture.h"
@@ -78,6 +77,8 @@ struct BezierCurve
 				return ps[0];
 			}
 		}
+
+		return glm::vec3(0.0f, 0.0f, 0.0f);
 	}
 };
 
@@ -105,6 +106,8 @@ struct BezierQuaternion
 				return qs[0];
 			}
 		}
+
+		return { 1.0f, 0.0f, 0.0f, 0.0f };
 	}
 };
 
@@ -185,7 +188,10 @@ public:
 	float lastRoll;
 	float rollDelay;
 
-	InputComponent(Entity* entity, bool active, bool acceptInput, float rollDelay);
+	float lastTurn;
+	float turnDelay;
+
+	InputComponent(Entity* entity, bool active, bool acceptInput, float rollDelay, float turnDelay);
 };
 
 class CameraFollowComponent : public Component
@@ -212,6 +218,7 @@ public:
 };
 
 enum class Face { front, back, left, right, top, bottom };
+enum class Corner { left, bottom, right, top };
 class ActorComponent : public Component
 {
 public:

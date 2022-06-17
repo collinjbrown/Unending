@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 
 enum class Face;
+enum class Corner;
 struct Quaternion;
 
 class Util
@@ -20,6 +21,13 @@ public:
 	static glm::vec3 Rotate(glm::vec3 position, Quaternion q);
 	
 	static glm::vec3 Lerp(glm::vec3 a, glm::vec3 b, float step);
+
+	static Face GetFaceFromQuaternion(Quaternion q);
+	static Quaternion GetQuaternionFromFace(Face f);
+	static Face GetCameraFace(glm::vec3 forward);
+
+	static Quaternion GetCameraOrientation(Face face, Corner corner);
+	static Face GetFaceChangeHorizontal(Face face, Corner corner, int dX);
 
 	static glm::vec3 GetRelativeUp(Face face);
 	static Quaternion GetFaceRotation(Face face);

@@ -6,7 +6,8 @@
 #include "util.h"
 #include <glm/gtx/norm.hpp>
 
-Renderer::Renderer(GLuint whiteTexture) : batches(1), shader("assets/shaders/base.vert", "assets/shaders/base.frag"), whiteTextureID(whiteTexture)
+Renderer::Renderer(GLuint whiteTexture) : batches(1), shader("assets/shaders/base.vert", "assets/shaders/base.frag"),
+whiteTextureID(whiteTexture)
 {
 	GLuint IBO;
 
@@ -40,12 +41,11 @@ Renderer::Renderer(GLuint whiteTexture) : batches(1), shader("assets/shaders/bas
 	unsigned int indices[Batch::MAX_TRIS * 3];
 	for (int i = 0; i < Batch::MAX_TRIS; i++)
 	{
-		const int rightOffset = 3 * i;
-		const int leftOffset = 3 * i;
+		const int offset = 3 * i;
 
-		indices[leftOffset + 0] = rightOffset + 0;
-		indices[leftOffset + 1] = rightOffset + 1;
-		indices[leftOffset + 2] = rightOffset + 2;
+		indices[offset + 0] = offset + 0;
+		indices[offset + 1] = offset + 1;
+		indices[offset + 2] = offset + 2;
 	}
 
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);

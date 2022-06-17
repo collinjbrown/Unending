@@ -10,7 +10,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(BASE_SRCS
-    "src/external/obj_loader.h"
     "src/external/stb_image.cpp"
     "src/external/stb_image.h"
     "src/animation.cpp"
@@ -22,8 +21,6 @@ set(BASE_SRCS
     "src/game.cpp"
     "src/game.h"
     "src/main.cpp"
-    "src/model.cpp"
-    "src/model.h"
     "src/renderer.cpp"
     "src/renderer.h"
     "src/shader.cpp"
