@@ -412,10 +412,7 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 	MoveCube(activeCube, landingCubePosition.x, landingCubePosition.y, landingCubePosition.z);
 
 	// Oh, and we roll the actor onto the right face.
-	RollActor(actor, roll, standingFace);
-	/*actor->face = standingFace;
-	PositionActor(actor);*/
-	// actor->face = landingFace;
+	RollActor(actor, roll, landingFace, standingFace, false);
 
 	// But we can't forget that this might involve a larger structure of cubes.
 	// This is where things get a little complicated.
@@ -588,7 +585,7 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 	MoveCube(activeCube, landingCubePosition.x, landingCubePosition.y, landingCubePosition.z);
 
 	// Oh, and we roll the actor onto the right face.
-	RollActor(actor, roll, standingFace);
+	RollActor(actor, roll, oppFulcrum, standingFace, true);
 	/*actor->face = standingFace;
 	PositionActor(actor);*/
 	// actor->face = landingFace;
@@ -742,7 +739,7 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 		{
 			// We can assume that the landing face is the sane as our roll direction.
 
-			HalfRoll(actor, rollDirection, Util::OppositeFace(fulcrum.first), roll, landingTarget, roll, affectedCubes);
+			HalfRoll(actor, Util::OppositeFace(actor->face), Util::OppositeFace(fulcrum.first), roll, landingTarget, roll, affectedCubes);
 			return;
 		}
 	}
@@ -758,14 +755,14 @@ void ECS::RollCube(CubeComponent* cube, Face rollDirection)
 
 }
 
-void ECS::RollActor(ActorComponent* actor, Face rollDirection, Face landingFace)
+void ECS::RollActor(ActorComponent* actor, Face rollDirection, Face landingFace, Face standingFace, bool half)
 {
 	PositionComponent* pos = (PositionComponent*)actor->entity->componentIDMap[positionComponentID];
 	MovementComponent* mover = (MovementComponent*)actor->entity->componentIDMap[movementComponentID];
 	CubeComponent* cube = (CubeComponent*)actor->cube->componentIDMap[cubeComponentID];
 
 	Quaternion r = Util::GetRollRotation(landingFace, rollDirection, pos->quaternion, 2);
-	glm::vec3 endPos = CubeToWorldSpace(cube->x, cube->y, cube->z) + Util::Rotate(glm::vec3(0.0f, (float)cubeSize, 0.0f), Util::GetQuaternionFromFace(landingFace));
+	glm::vec3 endPos = CubeToWorldSpace(cube->x, cube->y, cube->z) + Util::Rotate(glm::vec3(0.0f, (float)cubeSize, 0.0f), Util::GetQuaternionFromFace(standingFace));
 
 	glm::vec3 forward = Util::GetRelativeUp(rollDirection);
 	if (forward.z != 0) forward *= -1.0f;
@@ -777,9 +774,18 @@ void ECS::RollActor(ActorComponent* actor, Face rollDirection, Face landingFace)
 	glm::vec3 p2 = endPos + (up * length);
 
 	mover->RegisterMovement(3.5f, { { pos->position, p1, p2, endPos } }, 1.0f);
-	mover->RegisterMovement(3.5f, { { pos->quaternion, r } }, 1.0f);
 
-	actor->face = landingFace;
+	if (half)
+	{
+		Quaternion r2 = Util::GetRollRotation(landingFace, rollDirection, r, 2);
+		mover->RegisterMovement(3.5f, { {pos->quaternion, r, r2 } }, 1.0f);
+	}
+	else
+	{
+		mover->RegisterMovement(3.5f, { { pos->quaternion, r } }, 1.0f);
+	}
+
+	actor->face = standingFace;
 }
 
 #pragma endregion

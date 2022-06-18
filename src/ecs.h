@@ -88,7 +88,7 @@ public:
 	void RollCube(ActorComponent* actor, Face rollDirection);
 	void RollCube(CubeComponent* cube, Face rollDirection);
 
-	void RollActor(ActorComponent* actor, Face rollDirection, Face landingFace);
+	void RollActor(ActorComponent* actor, Face rollDirection, Face landingFace, Face standingFace, bool half);
 };
 
 #endif
