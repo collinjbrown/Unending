@@ -71,6 +71,7 @@ public:
 	Renderer(GLuint whiteTexture);
 
 	void PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID);
+	void PrepareModel(glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, Model* model);
 
 	void PrepareQuad(Quad& input, int textureID);
 	void PrepareQuad(glm::vec2 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID);

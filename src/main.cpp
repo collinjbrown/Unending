@@ -82,6 +82,9 @@ int main(void)
 	Renderer renderer{ whiteTexture->ID };
 	Game::main.renderer = &renderer;
 
+	Model testModel{ "assets/models/walker.obj" };
+	Game::main.modelMap.emplace("test", &testModel);
+
 	Texture test{ "assets/sprites/test2.png", true, GL_NEAREST };
 	renderer.textureIDs.push_back(test.ID);
 	Game::main.textureMap.emplace("test", &test);

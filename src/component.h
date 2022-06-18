@@ -7,6 +7,7 @@
 #include "util.h"
 #include "texture.h"
 #include "animation.h"
+#include "model.h"
 
 class Entity;
 
@@ -19,6 +20,7 @@ static int cameraFollowComponentID			= 6;
 static int billboardingComponentID			= 7;
 static int actorComponentID					= 8;
 static int movementComponentID				= 9;
+static int modelComponentID					= 10;
 
 static int playerAnimControllerSubID		= 1;
 
@@ -232,8 +234,6 @@ public:
 
 	float speed;
 
-	Quaternion baseQuaternion;
-
 	ActorComponent(Entity* entity, bool active, float speed, Face face, Entity* cube);
 }; 
 
@@ -292,6 +292,17 @@ public:
 	void RegisterMovement(float speed, BezierCurve curve, float targetT);
 	void RegisterMovement(float speed, BezierQuaternion curve, float targetT);
 	MovementComponent(Entity* entity, bool active);
+};
+
+class ModelComponent : public Component
+{
+public:
+	Model* model;
+
+	glm::vec4 color;
+	glm::vec3 scale;
+
+	ModelComponent(Entity* entity, bool active, Model* model, glm::vec4 color, glm::vec3 scale);
 };
 
 #endif

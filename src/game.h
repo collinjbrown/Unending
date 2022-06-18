@@ -21,6 +21,7 @@ public:
 	Renderer* renderer;
 	std::map<std::string, Texture*> textureMap;
 	std::map<std::string, Animation*> animationMap;
+	std::map<std::string, Model*> modelMap;
 
 	float pixelation = 1.0f;
 
@@ -83,8 +84,8 @@ public:
 
 	int freeCamKey = GLFW_KEY_RIGHT_CONTROL;
 
-	int rotateXKey = GLFW_KEY_KP_2;
-	int unrotateXKey = GLFW_KEY_KP_8;
+	int rotateXKey = GLFW_KEY_KP_8;
+	int unrotateXKey = GLFW_KEY_KP_2;
 
 	int rotateYKey = GLFW_KEY_KP_9;
 	int unrotateYKey = GLFW_KEY_KP_7;

@@ -40,9 +40,9 @@ public:
 
 	static const int cubeSize = 10;
 
-	static const int maxWidth = 200;
-	static const int maxHeight = 200;
-	static const int maxDepth = 200;
+	static const int maxWidth = 100;
+	static const int maxHeight = 100;
+	static const int maxDepth = 100;
 
 	Entity* player;
 	Entity* cubes[maxWidth][maxHeight][maxDepth];
@@ -88,7 +88,7 @@ public:
 	void RollCube(ActorComponent* actor, Face rollDirection);
 	void RollCube(CubeComponent* cube, Face rollDirection);
 
-	void RollActor(ActorComponent* actor, Face rollDirection);
+	void RollActor(ActorComponent* actor, Face rollDirection, Face landingFace);
 };
 
 #endif

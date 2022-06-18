@@ -100,6 +100,39 @@ Bundle Renderer::DetermineBatch(int textureID)
 	}
 }
 
+void Renderer::PrepareModel(glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, Model* model)
+{
+	Bundle bundle = DetermineBatch(whiteTextureID);
+	Batch& batch = batches[bundle.batch];
+
+	int triCount = model->vertices.size() / 3;
+
+	for (int i = 0; i < triCount; i++)
+	{
+		glm::vec3 aPos = model->vertices[(i * 3) + 0] * size.x;
+		glm::vec3 bPos = model->vertices[(i * 3) + 1] * size.y;
+		glm::vec3 cPos = model->vertices[(i * 3) + 2] * size.z;
+
+		aPos.x *= -1.0f;
+		bPos.x *= -1.0f;
+		cPos.x *= -1.0f;
+		aPos.y *= -1.0f;
+		bPos.y *= -1.0f;
+		cPos.y *= -1.0f;
+
+		aPos = Util::RotateRelative(position, position + aPos, q);
+		bPos = Util::RotateRelative(position, position + bPos, q);
+		cPos = Util::RotateRelative(position, position + cPos, q);
+
+		Vertex a = { aPos.x, aPos.y, aPos.z, color.r, color.g, color.b, color.a, 0.0f, 0.0f, bundle.location };
+		Vertex b = { bPos.x, bPos.y, bPos.z, color.r, color.g, color.b, color.a, 0.0f, 0.0f, bundle.location };
+		Vertex c = { cPos.x, cPos.y, cPos.z, color.r, color.g, color.b, color.a, 0.0f, 0.0f, bundle.location };
+
+		batch.buffer[batch.index] = { a, b, c };
+		batch.index++;
+	}
+}
+
 void Renderer::PrepareCube(glm::vec3 size, glm::vec3 position, Quaternion q, glm::vec4 color, int textureID)
 {
 	glm::vec3 closeTopRight		= Util::RotateRelative(	position,	position + glm::vec3(size.x / 2.0f, size.y / 2.0f, -size.z / 2.0f),		q);// *Game::main.zoom;

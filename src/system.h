@@ -13,6 +13,7 @@ class CameraFollowComponent;
 class BillboardingComponent;
 class ActorComponent;
 class MovementComponent;
+class ModelComponent;
 
 class System
 {
@@ -139,6 +140,17 @@ class TurnSystem : public System
 class MovementSystem : public System
 {
 	std::vector<MovementComponent*> movers;
+
+	void Update(int activeScene, float deltaTime);
+
+	void AddComponent(Component* component);
+
+	void PurgeEntity(Entity* e);
+};
+
+class ModelSystem : public System
+{
+	std::vector<ModelComponent*> models;
 
 	void Update(int activeScene, float deltaTime);
 
