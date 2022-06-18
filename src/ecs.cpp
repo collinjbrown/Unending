@@ -1601,64 +1601,45 @@ void InputSystem::Update(int activeScene, float deltaTime)
 			{
 				camFollower->resetting = false;
 				input->lastTurn = 0.0f;
-				/*Quaternion locQ = Util::EulerToQuaternion({ deltaTheta, 0.0f, 0.0f });
-				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;*/
-
-				// Game::main.corner = (Corner)(abs(((int)Game::main.corner + 1 % 4)));
-				Game::main.face = Util::GetFaceChangeHorizontal(Game::main.face, Game::main.corner, 1.0f);
+				Game::main.lastFace = Game::main.face;
+				Game::main.face = Util::GetFaceChangeVertical(Game::main.face, Game::main.corner, 1.0f);
 			}
 			else if (unrotX && canTurn)
 			{
 				camFollower->resetting = false;
 				input->lastTurn = 0.0f;
-				/*Quaternion locQ = Util::EulerToQuaternion({ -deltaTheta, 0.0f, 0.0f });
-				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;*/
-
-				// Game::main.corner = (Corner)(abs(((int)Game::main.corner - 1 % 4)));
-				Game::main.face = Util::GetFaceChangeHorizontal(Game::main.face, Game::main.corner, -1.0f);
+				Game::main.lastFace = Game::main.face;
+				Game::main.face = Util::GetFaceChangeVertical(Game::main.face, Game::main.corner, -1.0f);
 			}
 
 			if (rotY && canTurn)
 			{
 				camFollower->resetting = false;
 				input->lastTurn = 0.0f;
-				/*Quaternion locQ = Util::EulerToQuaternion({ 0.0f, deltaTheta, 0.0f });
-				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;*/
-
 				Game::main.corner = (Corner)(((int)Game::main.corner + 1) % 4);
 			}
 			else if (unrotY && canTurn)
 			{
 				camFollower->resetting = false;
 				input->lastTurn = 0.0f;
-				/*Quaternion locQ = Util::EulerToQuaternion({ 0.0f, -deltaTheta, 0.0f });
-				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;*/
-
 				int c = (int)(Game::main.corner) - 1;
 				if (c < 0) c = 3;
-
 				Game::main.corner = (Corner)(c);
 			}
 
-			if (rotZ)
+			if (rotZ && canTurn)
 			{
 				camFollower->resetting = false;
 				input->lastTurn = 0.0f;
-				/*Quaternion locQ = Util::EulerToQuaternion({ 0.0f, 0.0f, deltaTheta });
-				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;*/
+				Game::main.lastFace = Game::main.face;
+				Game::main.face = Util::GetFaceChangeHorizontal(Game::main.face, Game::main.corner, 1.0f);
 			}
-			else if (unrotZ)
+			else if (unrotZ && canTurn)
 			{
 				camFollower->resetting = false;
 				input->lastTurn = 0.0f;
-				/*Quaternion locQ = Util::EulerToQuaternion({ 0.0f, 0.0f, -deltaTheta });
-				Util::NormalizeQuaternion(locQ);
-				camRot = locQ * camRot;*/
+				Game::main.lastFace = Game::main.face;
+				Game::main.face = Util::GetFaceChangeHorizontal(Game::main.face, Game::main.corner, -1.0f);
 			}
 
 			if (zoomOut)
@@ -1675,7 +1656,7 @@ void InputSystem::Update(int activeScene, float deltaTime)
 				}
 			}
 
-			camFollower->rotation = Util::Slerp(camFollower->rotation, Util::GetCameraOrientation(Game::main.face, Game::main.corner), deltaTime * 8.0f);
+			camFollower->rotation = Util::Slerp(camFollower->rotation, Util::GetCameraOrientation(Game::main.face, Game::main.lastFace, Game::main.corner), deltaTime * 8.0f);
 
 			if (resetRotation || camFollower->resetting)
 			{

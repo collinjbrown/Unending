@@ -26,8 +26,9 @@ public:
 	static Quaternion GetQuaternionFromFace(Face f);
 	static Face GetCameraFace(glm::vec3 forward);
 
-	static Quaternion GetCameraOrientation(Face face, Corner corner);
-	static Face GetFaceChangeHorizontal(Face face, Corner corner, int dX);
+	static Quaternion GetCameraOrientation(Face face, Face lastFace, Corner corner);
+	static Face GetFaceChangeVertical(Face face, Corner corner, int dX);
+	static Face GetFaceChangeHorizontal(Face face, Corner corner, int dZ);
 
 	static glm::vec3 GetRelativeUp(Face face);
 	static Quaternion GetFaceRotation(Face face);

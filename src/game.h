@@ -28,6 +28,7 @@ public:
 	int windowHeight = 720;
 
 	Face face = Face::top;
+	Face lastFace = Face::top;
 	Corner corner = Corner::bottom;
 
 	glm::vec2 mousePosition = glm::vec2(0.0f, 0.0f);
@@ -85,11 +86,11 @@ public:
 	int rotateXKey = GLFW_KEY_KP_2;
 	int unrotateXKey = GLFW_KEY_KP_8;
 
-	int rotateYKey = GLFW_KEY_KP_6;
-	int unrotateYKey = GLFW_KEY_KP_4;
+	int rotateYKey = GLFW_KEY_KP_9;
+	int unrotateYKey = GLFW_KEY_KP_7;
 
-	int rotateZKey = GLFW_KEY_KP_9;
-	int unrotateZKey = GLFW_KEY_KP_7;
+	int rotateZKey = GLFW_KEY_KP_6;
+	int unrotateZKey = GLFW_KEY_KP_4;
 
 	int zoomInKey = GLFW_KEY_KP_ADD;
 	int zoomOutKey = GLFW_KEY_KP_SUBTRACT;

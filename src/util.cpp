@@ -239,7 +239,7 @@ glm::vec3 Util::GetForward(Face up, Face right, bool corner)
 	return relativeRight;
 }
 
-Quaternion Util::GetCameraOrientation(Face face, Corner corner)
+Quaternion Util::GetCameraOrientation(Face face, Face lastFace, Corner corner)
 {
 	Quaternion xzRotation = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -250,7 +250,8 @@ Quaternion Util::GetCameraOrientation(Face face, Corner corner)
 	else if (face == Face::back)	xzRotation = EulerToQuaternion({ -M_PI / 2.0f, 0.0f, 0.0f });
 
 	float mod = 0.0f;
-	if (face == Face::bottom && (corner == Corner::top || corner == Corner::bottom)) mod = M_PI;
+	// && (corner == Corner::top || corner == Corner::bottom)
+	if (face == Face::bottom && (lastFace == Face::right || lastFace == Face::left)) mod = M_PI;
 
 	Quaternion xyRotation = EulerToQuaternion({ -M_PI / 4.0f, (M_PI / 4.0f) + mod, 0.0f});
 
@@ -312,72 +313,84 @@ Face Util::GetCameraFace(glm::vec3 forward)
 	return faceDistances[0].first;
 }
 
-Face Util::GetFaceChangeHorizontal(Face face, Corner corner, int dX)
+Face Util::GetFaceChangeVertical(Face face, Corner corner, int dX)
+{
+	Corner c;
+
+	if (corner == Corner::bottom)		c = Corner::right;
+	else if (corner == Corner::right)	c = Corner::top;
+	else if (corner == Corner::top)		c = Corner::left;
+	else								c = Corner::bottom;
+
+	return GetFaceChangeHorizontal(face, c, dX);
+}
+
+Face Util::GetFaceChangeHorizontal(Face face, Corner corner, int dZ)
 {
 	// My brain is too smooth, sorry.
 
-	if (face == Face::top && corner == Corner::bottom && dX > 0) return Face::right;
-	if (face == Face::top && corner == Corner::right && dX > 0) return Face::back;
-	if (face == Face::top && corner == Corner::top && dX > 0) return Face::left;
-	if (face == Face::top && corner == Corner::left && dX > 0) return Face::front;
+	if (face == Face::top && corner == Corner::bottom && dZ > 0) return Face::right;
+	if (face == Face::top && corner == Corner::right && dZ > 0) return Face::back;
+	if (face == Face::top && corner == Corner::top && dZ > 0) return Face::left;
+	if (face == Face::top && corner == Corner::left && dZ > 0) return Face::front;
 
-	if (face == Face::top && corner == Corner::bottom && dX < 0) return Face::left;
-	if (face == Face::top && corner == Corner::right && dX < 0) return Face::front;
-	if (face == Face::top && corner == Corner::top && dX < 0) return Face::right;
-	if (face == Face::top && corner == Corner::left && dX < 0) return Face::back;
-
-
-	if (face == Face::bottom && corner == Corner::bottom && dX > 0) return Face::left;
-	if (face == Face::bottom && corner == Corner::right && dX > 0) return Face::front;
-	if (face == Face::bottom && corner == Corner::top && dX > 0) return Face::right;
-	if (face == Face::bottom && corner == Corner::left && dX > 0) return Face::back;
-
-	if (face == Face::bottom && corner == Corner::bottom && dX < 0) return Face::right;
-	if (face == Face::bottom && corner == Corner::right && dX < 0) return Face::back;
-	if (face == Face::bottom && corner == Corner::top && dX < 0) return Face::left;
-	if (face == Face::bottom && corner == Corner::left && dX < 0) return Face::front;
+	if (face == Face::top && corner == Corner::bottom && dZ < 0) return Face::left;
+	if (face == Face::top && corner == Corner::right && dZ < 0) return Face::front;
+	if (face == Face::top && corner == Corner::top && dZ < 0) return Face::right;
+	if (face == Face::top && corner == Corner::left && dZ < 0) return Face::back;
 
 
-	if (face == Face::right && corner == Corner::bottom && dX > 0) return Face::bottom;
-	if (face == Face::right && corner == Corner::right && dX > 0) return Face::back;
-	if (face == Face::right && corner == Corner::top && dX > 0) return Face::top;
-	if (face == Face::right && corner == Corner::left && dX > 0) return Face::front;
+	if (face == Face::bottom && corner == Corner::bottom && dZ > 0) return Face::left;
+	if (face == Face::bottom && corner == Corner::right && dZ > 0) return Face::front;
+	if (face == Face::bottom && corner == Corner::top && dZ > 0) return Face::right;
+	if (face == Face::bottom && corner == Corner::left && dZ > 0) return Face::back;
 
-	if (face == Face::right && corner == Corner::bottom && dX < 0) return Face::top;
-	if (face == Face::right && corner == Corner::right && dX < 0) return Face::front;
-	if (face == Face::right && corner == Corner::top && dX < 0) return Face::bottom;
-	if (face == Face::right && corner == Corner::left && dX < 0) return Face::back;
-
-
-	if (face == Face::left && corner == Corner::bottom && dX > 0) return Face::top;
-	if (face == Face::left && corner == Corner::right && dX > 0) return Face::front;
-	if (face == Face::left && corner == Corner::top && dX > 0) return Face::bottom;
-	if (face == Face::left && corner == Corner::left && dX > 0) return Face::back;
-
-	if (face == Face::left && corner == Corner::bottom && dX < 0) return Face::bottom;
-	if (face == Face::left && corner == Corner::right && dX < 0) return Face::back;
-	if (face == Face::left && corner == Corner::top && dX < 0) return Face::top;
-	if (face == Face::left && corner == Corner::left && dX < 0) return Face::front;
+	if (face == Face::bottom && corner == Corner::bottom && dZ < 0) return Face::right;
+	if (face == Face::bottom && corner == Corner::right && dZ < 0) return Face::back;
+	if (face == Face::bottom && corner == Corner::top && dZ < 0) return Face::left;
+	if (face == Face::bottom && corner == Corner::left && dZ < 0) return Face::front;
 
 
-	if (face == Face::front && corner == Corner::bottom && dX > 0) return Face::left;
-	if (face == Face::front && corner == Corner::right && dX > 0) return Face::top;
-	if (face == Face::front && corner == Corner::top && dX > 0) return Face::right;
-	if (face == Face::front && corner == Corner::left && dX > 0) return Face::bottom;
+	if (face == Face::right && corner == Corner::bottom && dZ > 0) return Face::bottom;
+	if (face == Face::right && corner == Corner::right && dZ > 0) return Face::back;
+	if (face == Face::right && corner == Corner::top && dZ > 0) return Face::top;
+	if (face == Face::right && corner == Corner::left && dZ > 0) return Face::front;
 
-	if (face == Face::front && corner == Corner::bottom && dX < 0) return Face::right;
-	if (face == Face::front && corner == Corner::right && dX < 0) return Face::bottom;
-	if (face == Face::front && corner == Corner::top && dX < 0) return Face::left;
-	if (face == Face::front && corner == Corner::left && dX < 0) return Face::top;
+	if (face == Face::right && corner == Corner::bottom && dZ < 0) return Face::top;
+	if (face == Face::right && corner == Corner::right && dZ < 0) return Face::front;
+	if (face == Face::right && corner == Corner::top && dZ < 0) return Face::bottom;
+	if (face == Face::right && corner == Corner::left && dZ < 0) return Face::back;
 
 
-	if (face == Face::back && corner == Corner::bottom && dX > 0) return Face::right;
-	if (face == Face::back && corner == Corner::right && dX > 0) return Face::bottom;
-	if (face == Face::back && corner == Corner::top && dX > 0) return Face::left;
-	if (face == Face::back && corner == Corner::left && dX > 0) return Face::top;
+	if (face == Face::left && corner == Corner::bottom && dZ > 0) return Face::top;
+	if (face == Face::left && corner == Corner::right && dZ > 0) return Face::front;
+	if (face == Face::left && corner == Corner::top && dZ > 0) return Face::bottom;
+	if (face == Face::left && corner == Corner::left && dZ > 0) return Face::back;
 
-	if (face == Face::back && corner == Corner::bottom && dX < 0) return Face::left;
-	if (face == Face::back && corner == Corner::right && dX < 0) return Face::top;
-	if (face == Face::back && corner == Corner::top && dX < 0) return Face::right;
-	if (face == Face::back && corner == Corner::left && dX < 0) return Face::bottom;
+	if (face == Face::left && corner == Corner::bottom && dZ < 0) return Face::bottom;
+	if (face == Face::left && corner == Corner::right && dZ < 0) return Face::back;
+	if (face == Face::left && corner == Corner::top && dZ < 0) return Face::top;
+	if (face == Face::left && corner == Corner::left && dZ < 0) return Face::front;
+
+
+	if (face == Face::front && corner == Corner::bottom && dZ > 0) return Face::left;
+	if (face == Face::front && corner == Corner::right && dZ > 0) return Face::top;
+	if (face == Face::front && corner == Corner::top && dZ > 0) return Face::right;
+	if (face == Face::front && corner == Corner::left && dZ > 0) return Face::bottom;
+
+	if (face == Face::front && corner == Corner::bottom && dZ < 0) return Face::right;
+	if (face == Face::front && corner == Corner::right && dZ < 0) return Face::bottom;
+	if (face == Face::front && corner == Corner::top && dZ < 0) return Face::left;
+	if (face == Face::front && corner == Corner::left && dZ < 0) return Face::top;
+
+
+	if (face == Face::back && corner == Corner::bottom && dZ > 0) return Face::right;
+	if (face == Face::back && corner == Corner::right && dZ > 0) return Face::bottom;
+	if (face == Face::back && corner == Corner::top && dZ > 0) return Face::left;
+	if (face == Face::back && corner == Corner::left && dZ > 0) return Face::top;
+
+	if (face == Face::back && corner == Corner::bottom && dZ < 0) return Face::left;
+	if (face == Face::back && corner == Corner::right && dZ < 0) return Face::top;
+	if (face == Face::back && corner == Corner::top && dZ < 0) return Face::right;
+	if (face == Face::back && corner == Corner::left && dZ < 0) return Face::bottom;
 }
