@@ -370,6 +370,8 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 					minT = std::min(lastSafeT, minT);
 					break;
 				}
+
+				lastSafeT = j;
 			}
 			else
 			{
@@ -543,7 +545,7 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 
 				for (int m = 0; m < affectedCubes.size(); m++)
 				{
-					if (e == affectedCubes[m]->entity)
+					if (e == affectedCubes[m]->entity || e == landingTarget)
 					{
 						isAffected = true;
 					}
@@ -554,6 +556,8 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 					minT = std::min(lastSafeT, minT);
 					break;
 				}
+
+				lastSafeT = j;
 			}
 			else
 			{
@@ -940,7 +944,7 @@ void ECS::Update(float deltaTime)
 		ECS::main.RegisterComponent(new InputComponent(player, true, true, 0.5f, 0.5f), player);
 		ECS::main.RegisterComponent(new ActorComponent(player, true, 10.0f, Face::back, ECS::main.cubes[(mapWidth / 2) + midMaxX][midMaxY - 1][mapDepth - 1 + midMaxZ]), player);
 		ECS::main.RegisterComponent(new MovementComponent(player, true), player);
-		ECS::main.RegisterComponent(new ModelComponent(player, true, Game::main.modelMap["test"], { 0.5f, 0.5f, 0.5f, 1.0f }, { 5.0f, 5.0f, 5.0f }), player);
+		ECS::main.RegisterComponent(new ModelComponent(player, true, Game::main.modelMap["test"], { 0.0f, 2.0f, 0.0f }, {0.5f, 0.5f, 0.5f, 1.0f}, {5.0f, 5.0f, 5.0f}), player);
 
 		PositionActor((ActorComponent*)player->componentIDMap[actorComponentID]);
 
@@ -1253,12 +1257,15 @@ void MovementComponent::RegisterMovement(float speed, BezierQuaternion curve, fl
 
 #pragma region Model Component
 
-ModelComponent::ModelComponent(Entity* entity, bool active, Model* model, glm::vec4 color, glm::vec3 scale)
+ModelComponent::ModelComponent(Entity* entity, bool active, Model* model, glm::vec3 offset, glm::vec4 color, glm::vec3 scale)
 {
 	this->ID = modelComponentID;
 	this->entity = entity;
 	this->active = active;
 	
+	this->offset = offset;
+	this->baseOffset = offset;
+
 	this->model = model;
 	this->color = color;
 	this->scale = scale;
@@ -1976,8 +1983,9 @@ void ModelSystem::Update(int activeScene, float deltaTime)
 			model->active && model->entity->GetScene() == 0)
 		{
 			PositionComponent* pos = (PositionComponent*)model->entity->componentIDMap[positionComponentID];
-			
-			Game::main.renderer->PrepareModel(model->scale, pos->position, pos->quaternion, model->color, model->model);
+			glm::vec3 offset = Util::Rotate(model->offset, pos->quaternion);
+
+			Game::main.renderer->PrepareModel(model->scale, pos->position + offset, pos->quaternion, model->color, model->model);
 		}
 	}
 }

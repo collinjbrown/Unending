@@ -299,10 +299,13 @@ class ModelComponent : public Component
 public:
 	Model* model;
 
+	glm::vec3 offset;
+	glm::vec3 baseOffset;
+
 	glm::vec4 color;
 	glm::vec3 scale;
 
-	ModelComponent(Entity* entity, bool active, Model* model, glm::vec4 color, glm::vec3 scale);
+	ModelComponent(Entity* entity, bool active, Model* model, glm::vec3 baseOffset, glm::vec4 color, glm::vec3 scale);
 };
 
 #endif
