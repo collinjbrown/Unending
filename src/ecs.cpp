@@ -704,6 +704,29 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 
 		if (possibleBlockerEntity != nullptr) return;
 
+		// Next we need to see if the block right above that is blocked.
+
+		glm::vec3 standUp = Util::GetRelativeUp(actor->face);
+		Entity* possibleBlockerEntity2 = GetCube(activeCube->x + (int)rollUp.x + (int)standUp.x,
+			activeCube->y + (int)rollUp.y + (int)standUp.y,
+			activeCube->z + (int)rollUp.z + (int)standUp.z);
+
+		bool blocked = false;
+
+		if (possibleBlockerEntity2 != nullptr && affectedCubes.size() > 1)
+		{
+			CubeComponent* possibleBlocker = (CubeComponent*)possibleBlockerEntity2->componentIDMap[cubeComponentID];
+
+			auto result = std::find(affectedCubes.begin(), affectedCubes.end(), possibleBlocker);
+
+			if (result == affectedCubes.end())
+			{
+				blocked = true;
+			}
+		}
+
+		if (possibleBlockerEntity2 != nullptr && blocked) return;
+
 		// Now, we have the "real" direction we're going to be rolling.
 		// We want to figure out where we're going to land.
 		// This is a function of the fulcrum and the roll direction.
@@ -714,12 +737,22 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 		Entity* landingTarget = GetCube(landingCoords.x, landingCoords.y, landingCoords.z);
 		Face landingFace;
 
-		// If there is a cube there, we can stop now and initiate the actual roll.
+		// If there is a cube there, we can stop now and (check something, then) initiate the actual roll.
 		if (landingTarget != nullptr)
 		{
 			// The face we're landing on is the opposite of the fulcrum.
 			// At least so long as we're doing only a 90 degree rotation.
 			landingFace = Util::OppositeFace(fulcrum.first);
+
+			// We need to make sure that the player won't get stuck on any cubes while rolling.
+			CubeComponent* landingCube = (CubeComponent*)landingTarget->componentIDMap[cubeComponentID];
+			glm::vec3 landingUp = Util::GetRelativeUp(landingFace);
+			glm::vec3 landingCubePosition = glm::vec3(landingCube->x + (int)landingUp.x, landingCube->y + (int)landingUp.y, landingCube->z + (int)landingUp.z);
+
+			standUp = Util::GetRelativeUp(rollDirection);
+			Entity* possibleBlockerEntity3 = GetCube(landingCubePosition.x + (int)standUp.x, landingCubePosition.y + (int)standUp.y, landingCubePosition.z + (int)standUp.z);
+
+			if (possibleBlockerEntity3 != nullptr) return;
 
 			QuarterRoll(actor, rollDirection, roll, landingTarget, landingFace, affectedCubes);
 			return;
@@ -741,7 +774,17 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 		// And if there is something for us to land on there, let's do it.
 		if (landingTarget != nullptr && affectedCubes.size() == 1)
 		{
-			// We can assume that the landing face is the sane as our roll direction.
+			// We need to make sure that the player won't get stuck on any cubes while rolling.
+			CubeComponent* landingCube = (CubeComponent*)landingTarget->componentIDMap[cubeComponentID];
+			glm::vec3 landingUp = Util::GetRelativeUp(roll);
+			glm::vec3 landingCubePosition = glm::vec3(landingCube->x + (int)landingUp.x, landingCube->y + (int)landingUp.y, landingCube->z + (int)landingUp.z);
+
+			standUp = Util::GetRelativeUp(Util::OppositeFace(actor->face));
+			Entity* possibleBlockerEntity3 = GetCube(landingCubePosition.x + (int)standUp.x, landingCubePosition.y + (int)standUp.y, landingCubePosition.z + (int)standUp.z);
+
+			if (possibleBlockerEntity3 != nullptr) return;
+
+			// We can assume that the landing face is the same as our roll direction.
 
 			HalfRoll(actor, Util::OppositeFace(actor->face), Util::OppositeFace(fulcrum.first), roll, landingTarget, roll, affectedCubes);
 			return;
@@ -864,9 +907,9 @@ void ECS::Update(float deltaTime)
 	if (round == 1)
 	{
 		float cubeSize = (float)this->cubeSize;
-		int mapWidth = 2;
-		int mapHeight = 2;
-		int mapDepth = 2;
+		int mapWidth = 5;
+		int mapHeight = 5;
+		int mapDepth = 5;
 
 		int midMaxX = (ECS::main.maxWidth / 2) - (mapWidth / 2);
 		int midMaxY = (ECS::main.maxHeight / 2) - (mapHeight / 2);
