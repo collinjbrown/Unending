@@ -51,6 +51,11 @@ struct Quaternion
 	{
 		return ((this->w == rhs.w) && (this->x == rhs.x) && (this->y == rhs.y) && (this->z == rhs.z));
 	}
+
+	Quaternion operator-() const noexcept
+	{
+		return Quaternion{ -this->w, -this->x, -this->y, -this->z };
+	}
 };
 
 struct BezierCurve

@@ -33,6 +33,7 @@ Quaternion Util::Slerp(Quaternion l, Quaternion r, float step)
 
 	if (isnan(q.x) || isnan(q.y) || isnan(q.z)) return r;
 
+	if (theta > 2.0) return -q;
 	return q;
 }
 
@@ -249,7 +250,7 @@ Quaternion Util::GetCameraOrientation(Face face, Corner corner)
 	else if (face == Face::back)	xzRotation = EulerToQuaternion({ -M_PI / 2.0f, 0.0f, 0.0f });
 
 	float mod = 0.0f;
-	if (face == Face::bottom) mod = M_PI;
+	if (face == Face::bottom && (corner == Corner::top || corner == Corner::bottom)) mod = M_PI;
 
 	Quaternion xyRotation = EulerToQuaternion({ -M_PI / 4.0f, (M_PI / 4.0f) + mod, 0.0f});
 
@@ -302,11 +303,6 @@ Face Util::GetCameraFace(glm::vec3 forward)
 	faceDistances.push_back(std::pair<Face, float>(Face::left, glm::length2(forward - glm::vec3(-1.0f, 0.0f, 0.0f))));
 	faceDistances.push_back(std::pair<Face, float>(Face::front, glm::length2(forward - glm::vec3(0.0f, 0.0f, 1.0f))));
 	faceDistances.push_back(std::pair<Face, float>(Face::back, glm::length2(forward - glm::vec3(0.0f, 0.0f, -1.0f))));
-
-	for (int i = 0; i < faceDistances.size(); i++)
-	{
-		std::cout << std::to_string(faceDistances[i].second) << std::endl;
-	}
 
 	std::sort(faceDistances.begin(), faceDistances.end(), [](const std::pair<Face, float>& a, const std::pair<Face, float>& b) -> bool
 		{
