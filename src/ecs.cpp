@@ -751,12 +751,6 @@ void ECS::RollCube(ActorComponent* actor, Face rollDirection)
 	// This means we couldn't find a suitable landing position and thus shouldn't roll the cubes at all.
 	// Oh well, better luck next time.
 	return;
-
-}
-
-void ECS::RollCube(CubeComponent* cube, Face rollDirection)
-{
-
 }
 
 void ECS::RollActor(ActorComponent* actor, Face rollDirection, Face landingFace, Face standingFace, bool half)

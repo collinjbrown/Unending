@@ -86,7 +86,6 @@ public:
 	void HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Face rollDirection, Entity* landingTarget, Face landingFace, std::vector<CubeComponent*> affectedCubes);
 
 	void RollCube(ActorComponent* actor, Face rollDirection);
-	void RollCube(CubeComponent* cube, Face rollDirection);
 
 	void RollActor(ActorComponent* actor, Face rollDirection, Face landingFace, Face standingFace, bool half);
 };
