@@ -250,14 +250,13 @@ Quaternion Util::GetCameraOrientation(Face face, Face lastFace, Corner corner)
 	else if (face == Face::back)	xzRotation = EulerToQuaternion({ -M_PI / 2.0f, 0.0f, 0.0f });
 
 	float mod = 0.0f;
-	// && (corner == Corner::top || corner == Corner::bottom)
 	if (face == Face::bottom && (lastFace == Face::right || lastFace == Face::left)) mod = M_PI;
 
-	Quaternion xyRotation = EulerToQuaternion({ -M_PI / 4.0f, (M_PI / 4.0f) + mod, 0.0f});
+	Quaternion xyRotation = EulerToQuaternion({ -M_PI / 4.0f, (M_PI / 4.0f) + mod, 0.0f });
 
 	if (corner == Corner::top)			xyRotation = EulerToQuaternion({ -M_PI / 4.0f, (M_PI * 1.25f) + mod, 0.0f });
-	else if (corner == Corner::right)	xyRotation = EulerToQuaternion({ -M_PI / 4.0f, (M_PI * 0.75f) + mod, 0.0f});
-	else if (corner == Corner::left)	xyRotation = EulerToQuaternion({ -M_PI / 4.0f, (-M_PI * 0.25f) + mod, 0.0f});
+	else if (corner == Corner::right)	xyRotation = EulerToQuaternion({ -M_PI / 4.0f, (M_PI * 0.75f) + mod, 0.0f });
+	else if (corner == Corner::left)	xyRotation = EulerToQuaternion({ -M_PI / 4.0f, (-M_PI * 0.25f) + mod, 0.0f });
 
 	Quaternion total = xzRotation * xyRotation;
 	NormalizeQuaternion(total);
