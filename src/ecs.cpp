@@ -42,13 +42,6 @@ void ECS::PositionActor(ActorComponent* actor)
 
 void ECS::MoveCube(CubeComponent* cube, int x, int y, int z)
 {
-	if (cubes[cube->x][cube->y][cube->z] = cube->entity)
-	{
-		cubes[cube->x][cube->y][cube->z] = nullptr;
-	}
-
-	Entity* b = cubes[x][y][z];
-
 	cube->x = x;
 	cube->y = y;
 	cube->z = z;
@@ -379,6 +372,15 @@ void ECS::QuarterRoll(ActorComponent* actor, Face standingFace, Face rollDirecti
 
 	if (minT == 0.0f) return;
 
+	// Now, we need to quickly unassign all the affected cubes from their old positions.
+	// So that we don't run into any bugs when we add them to a new spot.
+
+	for (int i = 0; i < affectedCubes.size(); i++)
+	{
+		CubeComponent* cube = affectedCubes[i];
+		cubes[cube->x][cube->y][cube->z] = nullptr;
+	}
+
 	// Now we need to figure out how the cube is gonna roll.
 	Quaternion newRotation = Util::GetRollRotation(landingFace, roll, pos->quaternion, std::max(2, (int)(2 * (minT))));
 	glm::vec3 activeFinalPoint = landingWorldPosition;
@@ -576,6 +578,13 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 	}
 
 	if (minT == 0.0f) return;
+
+	for (int i = 0; i < affectedCubes.size(); i++)
+	{
+		CubeComponent* cube = affectedCubes[i];
+		cubes[cube->x][cube->y][cube->z] = nullptr;
+	}
+
 	// Now we need to figure out how the cube is gonna roll.
 	Quaternion newRotation = Util::GetRollRotation(oppFulcrum, roll, pos->quaternion, std::max(2, (int)(2 * (minT))));
 	Quaternion newRotation2 = Util::GetRollRotation(oppFulcrum, roll, newRotation, std::max(2, (int)(2 * (minT))));
@@ -940,13 +949,6 @@ void ECS::Update(float deltaTime)
 			}
 		}
 
-		/*Entity* cube = CreateEntity(0, "Cube: " + std::to_string((mapWidth / 2) + midMaxX) + " / " + std::to_string(-1 + midMaxY) + " / " + std::to_string(mapDepth - 1 + midMaxZ));
-		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
-		ECS::main.RegisterComponent(new CubeComponent(cube, true, (mapWidth / 2) + midMaxX, -1 + midMaxY, mapDepth - 1 + midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["block"]), cube);
-		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], (mapWidth / 2) + midMaxX, -1 + midMaxY, mapDepth - 1 + midMaxZ);
-		ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-		ECS::main.cubes[(mapWidth / 2) + +midMaxX][-1 + midMaxY][mapDepth - 1 + midMaxZ] = cube;*/
-
 		for (int x = 0; x < mapWidth; x++)
 		{
 			for (int i = 1; i < 10; i++)
@@ -967,32 +969,10 @@ void ECS::Update(float deltaTime)
 		ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
 		ECS::main.cubes[1 + midMaxX][midMaxY + mapHeight - 3][midMaxZ - 1] = cube;
 
-		/*for (int i = 1; i < 10; i++)
-		{
-			Entity* cube = CreateEntity(0, "Cube: " + std::to_string(mapWidth - 2 + midMaxX) + " / " + std::to_string(-i + midMaxY) + " / " + std::to_string(midMaxZ + 1));
-			ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
-			ECS::main.RegisterComponent(new CubeComponent(cube, true, mapWidth - 2 + midMaxX, -i + midMaxY, midMaxZ + 1, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
-			ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], mapWidth - 2 + midMaxX, -i + midMaxY, midMaxZ + 1);
-			ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-			ECS::main.cubes[mapWidth - 2 + midMaxX][-i + midMaxY][midMaxZ + 1] = cube;
-		}
-
-		Entity* cube = CreateEntity(0, "Cube: " + std::to_string(midMaxX) + " / " + std::to_string(midMaxY + 1) + " / " + std::to_string(midMaxZ));
-		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
-		ECS::main.RegisterComponent(new CubeComponent(cube, true, midMaxX, midMaxY + 1, midMaxZ, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
-		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], midMaxX, midMaxY + 1, midMaxZ);
-		ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-		ECS::main.cubes[midMaxX][midMaxY + 1][midMaxZ] = cube;*/
-
 		player = CreateEntity(0, "Player");
 		Animation* testIdle = Game::main.animationMap["testIdle"];
 
 		ECS::main.RegisterComponent(new PositionComponent(player, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), player);
-		// ECS::main.RegisterComponent(new ModelComponent(player, true, Game::main.modelMap["walker"]), player);
-		/*ECS::main.RegisterComponent(new AnimationComponent(player, true, glm::vec3(0.0f, 0.0f, 0.0f), testIdle, "idle", 0.2f, 0.2f, false, false, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)), player);
-		AnimationComponent* a = (AnimationComponent*)player->componentIDMap[animationComponentID];
-		ECS::main.RegisterComponent(new PlayerAnimationControllerComponent(player, true, a), player);*/
-		// ECS::main.RegisterComponent(new BillboardingComponent(player, true), player);
 		ECS::main.RegisterComponent(new CameraFollowComponent(player, true, { -1.0f, 0.0f, 0.0f, 0.0f }, 500.0f, 40.0f, true, false, false, false), player);
 		ECS::main.RegisterComponent(new InputComponent(player, true, true, 0.5f, 0.5f), player);
 		ECS::main.RegisterComponent(new ActorComponent(player, true, 10.0f, Face::back, ECS::main.cubes[(mapWidth / 2) + midMaxX][midMaxY - 1][mapDepth - 1 + midMaxZ]), player);
@@ -1459,11 +1439,11 @@ void AnimationSystem::Update(int activeScene, float deltaTime)
 
 			PositionComponent* pos = (PositionComponent*)a->entity->componentIDMap[positionComponentID];
 			
-			// glm::vec3 truePos = pos->position + Util::Rotate(a->offset, pos->quaternion);
 			Game::main.renderer->PrepareQuad(glm::vec2(activeAnimation->width * a->scaleX, activeAnimation->height * a->scaleY), pos->position, pos->quaternion, a->color, activeAnimation->ID, cellX, cellY, activeAnimation->columns, activeAnimation->rows, a->flippedX, a->flippedY);
 		}
 	}
 }
+
 void AnimationSystem::AddComponent(Component* component)
 {
 	anims.push_back((AnimationComponent*)component);
