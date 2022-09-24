@@ -2,4 +2,6 @@
  A puzzle game about folding....
 
 # To Do
-- Decide if I want to add perspective puzzles....
+- Implement the perspecive feature.
+- Fix the text renderer.
+- Create some test puzzles to try out the basic mechanics.

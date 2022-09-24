@@ -498,7 +498,6 @@ void ECS::HalfRoll(ActorComponent* actor, Face standingFace, Face oppFulcrum, Fa
 	MovementComponent* mover = (MovementComponent*)actor->cube->componentIDMap[movementComponentID];
 	CubeComponent* landingCube = (CubeComponent*)landingTarget->componentIDMap[cubeComponentID];
 
-	std::cout << "Cube Space 3: " + std::to_string(activeCube->x) + " / " + std::to_string(activeCube->y) + " / " + std::to_string(activeCube->z) << std::endl;
 	// And just as a precaution.
 	Face activeFace = actor->face;
 	Face roll = rollDirection;
@@ -962,12 +961,12 @@ void ECS::Update(float deltaTime)
 			}
 		}
 
-		Entity* cube = CreateEntity(0, "Cube: " + std::to_string(1 + midMaxX) + std::to_string(midMaxY + mapHeight - 3) + " / " + std::to_string(midMaxZ - 1));
+		/*Entity* cube = CreateEntity(0, "Cube: " + std::to_string(1 + midMaxX) + std::to_string(midMaxY + mapHeight - 3) + " / " + std::to_string(midMaxZ - 1));
 		ECS::main.RegisterComponent(new PositionComponent(cube, true, glm::vec3(0.0f, 0.0f, 0.0f), { 1, 0, 0, 0 }), cube);
 		ECS::main.RegisterComponent(new CubeComponent(cube, true, 1 + midMaxX, midMaxY + mapHeight - 3, midMaxZ - 1, glm::vec3(cubeSize, cubeSize, cubeSize), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), Game::main.textureMap["test"]), cube);
 		ECS::main.PositionCube((CubeComponent*)cube->componentIDMap[cubeComponentID], 1 + midMaxX, midMaxY + mapHeight - 3, midMaxZ - 1);
 		ECS::main.RegisterComponent(new MovementComponent(cube, true), cube);
-		ECS::main.cubes[1 + midMaxX][midMaxY + mapHeight - 3][midMaxZ - 1] = cube;
+		ECS::main.cubes[1 + midMaxX][midMaxY + mapHeight - 3][midMaxZ - 1] = cube;*/
 
 		player = CreateEntity(0, "Player");
 		Animation* testIdle = Game::main.animationMap["testIdle"];

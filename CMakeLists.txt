@@ -30,6 +30,8 @@ set(BASE_SRCS
     "src/shader.cpp"
     "src/shader.h"
     "src/system.h"
+    "src/textrenderer.cpp"
+    "src/textrenderer.h"
     "src/texture.cpp"
     "src/texture.h"
     "src/util.cpp"
