@@ -7,6 +7,7 @@
 #include "game.h"
 #include "system.h"
 #include "entity.h"
+#include "puzzle.h"
 
 #pragma region Map
 

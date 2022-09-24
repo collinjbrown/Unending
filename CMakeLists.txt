@@ -25,6 +25,7 @@ set(BASE_SRCS
     "src/main.cpp"
     "src/model.cpp"
     "src/model.h"
+    "src/puzzle.h"
     "src/renderer.cpp"
     "src/renderer.h"
     "src/shader.cpp"
